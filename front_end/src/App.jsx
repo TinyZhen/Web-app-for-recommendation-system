@@ -5,6 +5,7 @@ import Survey from "./pages/Survey.jsx";
 import Recommend from "./pages/Recommend.jsx";
 import Favorites from "./pages/Favourite.jsx";
 import Auth from "./pages/Auth.jsx";
+import Register from "./pages/Register.jsx";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <NavLink to="/recommend">Recommend</NavLink>
         <NavLink to="/favorites">Favorites</NavLink>
         <NavLink to="/auth" style={{ marginLeft: "auto" }}>Sign in</NavLink>
+        {/* <NavLink to="/register">Register</NavLink> */}
       </nav>
 
       <main style={{ padding: 16 }}>
@@ -24,6 +26,7 @@ export default function App() {
           <Route path="/recommend" element={<Recommend />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/register" element={<Register />} />
         </Routes>
       </main>
     </div>
