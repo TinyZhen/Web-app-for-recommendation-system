@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { db } from "../firebase"; // 
 // If you track user auth, you can import auth and use currentUser.uid
 // import { auth } from "../firebase";
+import { useAuth } from "../auth/AuthProvider";
 import {
   addDoc,
   collection,
@@ -39,6 +40,7 @@ function sampleMany(arr, k, excludeIds = new Set()) {
 const normalize = (g) => String(g || "").trim();
 
 export default function Survey() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [movies, setMovies] = useState([]);
@@ -112,8 +114,7 @@ export default function Survey() {
     setError("");
 
     try {
-      const uid = (typeof auth !== "undefined" && auth?.currentUser?.uid) ? auth.currentUser.uid : "anonymous";
-
+      const uid = user?.uid || "anonymous";
       const payload = {
         userId: uid,
         createdAt: serverTimestamp(),
