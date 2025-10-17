@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import { fetchRecommendations } from '../lib/api.js';
+import { useAuth } from '../auth/AuthProvider';
 
 export default function Recommend() {
+  const { user, loading: authLoading } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (authLoading || !user) return;
+
     let active = true;
     (async () => {
       try {
@@ -21,13 +25,19 @@ export default function Recommend() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [authLoading, user]);
 
   return (
     <div>
       <main className="container">
         <div className="rec-card">
           <h2>Recommend</h2>
+
+          {user && (
+            <p style={{ fontSize: '0.9rem', color: '#666' }}>
+              Current user UID: <strong>{user.uid}</strong>
+            </p>
+          )}
 
           {loading && <p className="muted">Loading recommendations…</p>}
           {error && <p className="error">{error}</p>}

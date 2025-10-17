@@ -58,7 +58,7 @@ export default function Register() {
       );
 
       // 4) Go to recommendations after successful writes
-      nav("/recommendations", { replace: true });
+      nav("/survey", { replace: true });
     } catch (err) {
       setError(err.message || String(err));
     } finally {

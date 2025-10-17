@@ -17,7 +17,7 @@ export default function SignIn() {
 
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
-      nav('/recommendations', { replace: true });
+      nav('/recommend', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
