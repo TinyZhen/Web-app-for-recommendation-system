@@ -2,7 +2,12 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import pandas as pd
 import numpy as np
+import torch
+import torch.nn as nn
 from sklearn.preprocessing import MinMaxScaler
+from utility import get_E_ui, get_M_i, get_X_u, generate_llm_explanation, build_explanation_prompt, compute_proportional_demographic_bias
+from models import ExplanationVectorExtractor
+
 
 # ---------------------------
 # 1) Firestore -> DataFrames
@@ -68,7 +73,24 @@ for col in ["UserID", "MovieID"]:
 # If already epoch ints, this will still work.
 ratings["Timestamp"] = pd.to_datetime(ratings["Timestamp"]).astype("int64") // 10**9
 
-#conver userid from strings to numbers and make those userid consistent in both user and ratings data
+#convert userid from strings to numbers and make those userid consistent in both user and ratings data
+# 1. Collect all unique userIds from both DataFrames
+all_user_ids = pd.concat([user["UserId"], ratings["UserId"]]).unique()
+
+# 2. Fit LabelEncoder on the combined set
+encoder = LabelEncoder()
+encoder.fit(all_user_ids)
+
+# 3. Transform both DataFrames consistently
+user["UserId_num"] = encoder.transform(user["UserId"])
+ratings["UserId_num"] = encoder.transform(ratings["UserId"])
+
+# 4. Drop old UserId if you don’t need it
+user = user.drop(columns=["UserId"])
+ratings = ratings.drop(columns=["UserId"])
+
+user = user.rename(columns={"UserId_num": "UserId"})
+ratings = ratings.rename(columns={"UserId_num":"UserId"})
 
 # ---------------------------
 # 2) Bias Feature Engineering
@@ -96,43 +118,6 @@ interaction_bias = user_movie_group.copy()
 interaction_bias["IB"] = interaction_bias["r_wt"] / interaction_bias["w_t"]
 interaction_bias[["IB"]] = scaler.fit_transform(interaction_bias[["IB"]])
 
-# --- Proportional Demographic Bias (DB) helpers ---
-def compute_proportional_demographic_bias(ratings_df: pd.DataFrame, users_df: pd.DataFrame, group_field: str) -> pd.DataFrame:
-    """Returns columns: ['UserID','MovieID', f'DB_{group_field_normalized}']"""
-    bias_col = "DB_" + group_field.lower().replace("-", "")
-
-    # Keep only necessary fields from users
-    if group_field not in users_df.columns:
-        # if group field is missing, return empty join shell
-        return ratings_df[["UserID", "MovieID"]].assign(**{bias_col: np.nan})
-
-    merged = ratings_df.merge(users_df[["UserID", group_field]], on="UserID", how="left")
-
-    # size of each demographic group (# unique users per group)
-    group_sizes = merged.groupby(group_field)["UserID"].nunique()
-
-    # for each (group, item): # unique users in group who interacted with the item
-    group_item_counts = (
-        merged.groupby([group_field, "MovieID"])["UserID"]
-        .nunique()
-        .reset_index()
-        .rename(columns={"UserID": "GroupInteractionCount"})
-    )
-
-    group_item_counts["GroupSize"] = group_item_counts[group_field].map(group_sizes)
-    # proportion of group that interacted with item
-    group_item_counts[bias_col] = (
-        group_item_counts["GroupInteractionCount"] / group_item_counts["GroupSize"]
-    ).fillna(0.0)
-
-    result = group_item_counts[["MovieID", group_field, bias_col]]
-    merged = merged.merge(result, on=["MovieID", group_field], how="left")
-
-    # normalize 0..1
-    merged[[bias_col]] = scaler.fit_transform(merged[[bias_col]].fillna(0.0))
-
-    return merged[["UserID", "MovieID", bias_col]]
-
 # Compute DBs (will handle missing columns gracefully)
 pdb_gender     = compute_proportional_demographic_bias(ratings, user, "Gender")
 pdb_age        = compute_proportional_demographic_bias(ratings, user, "Age")
@@ -156,22 +141,159 @@ combined_pb_ib = ratings[["UserID", "MovieID", "PB"]].merge(
 
 # Final combined biases per (UserID, MovieID)
 combined_biases = combined_pb_ib.merge(combined_pdb, on=["UserID", "MovieID"], how="left")
+combined_biases['Rating'] = ratings['Rating']
 
-# Optional: if you want Timestamp back as epoch seconds:
-combined_biases = combined_biases.merge(
-    ratings[["UserID", "MovieID", "Timestamp"]],
-    on=["UserID", "MovieID"],
-    how="left",
-    suffixes=("", "_dt")
-)
-combined_biases["Timestamp"] = (combined_biases["Timestamp"].view("int64") // 10**9)
+# # Optional: if you want Timestamp back as epoch seconds:
+# combined_biases = combined_biases.merge(
+#     ratings[["UserID", "MovieID", "Timestamp"]],
+#     on=["UserID", "MovieID"],
+#     how="left",
+#     suffixes=("", "_dt")
+# )
+# combined_biases["Timestamp"] = (combined_biases["Timestamp"].view("int64") // 10**9)
 
 # Show results
-print("movie.head():")
-print(movie.head(), "\n")
-print("user.head():")
-print(user.head(), "\n")
-print("ratings (with PB/IB helpers) head():")
-print(ratings.head(), "\n")
-print("combined_biases.head():")
-print(combined_biases.head())
+# print("movie.head():")
+# print(movie.head(), "\n")
+# print("user.head():")
+# print(user.head(), "\n")
+# print("ratings (with PB/IB helpers) head():")
+# print(ratings.head(), "\n")
+# print("combined_biases.head():")
+# print(combined_biases.head())
+
+# Extract and convert all bias dimensions into tensor
+bias_columns = ['PB', 'IB', 'DB_gender', 'DB_age', 'DB_occupation', 'DB_zipcode']
+bias_tensor = torch.tensor(combined_biases[bias_columns].values, dtype=torch.float32)
+
+# Define projection dimensions
+k = 8  # latent space dimensionality
+
+# Learnable parameters (add one for item exposure)
+W_PB = nn.Parameter(torch.randn(1, k))
+W_IB = nn.Parameter(torch.randn(1, k))
+W_DB_gender = nn.Parameter(torch.randn(1, k))
+W_DB_age = nn.Parameter(torch.randn(1, k))
+W_DB_occupation = nn.Parameter(torch.randn(1, k))
+W_DB_zipcode = nn.Parameter(torch.randn(1, k))
+
+# Define the activation function ϕ (e.g., ReLU)
+activation = nn.ReLU()
+
+# Bias projection to latent space
+b_PB           = activation(bias_tensor[:, 0].unsqueeze(1)) @ W_PB
+b_IB           = activation(bias_tensor[:, 1].unsqueeze(1)) @ W_IB
+b_DB_gender    = activation(bias_tensor[:, 2].unsqueeze(1)) @ W_DB_gender
+b_DB_age       = activation(bias_tensor[:, 3].unsqueeze(1)) @ W_DB_age
+b_DB_occupation= activation(bias_tensor[:, 4].unsqueeze(1)) @ W_DB_occupation
+b_DB_zipcode   = activation(bias_tensor[:, 5].unsqueeze(1)) @ W_DB_zipcode
+
+# Step 1: Concatenate individual embeddings (add b_IE)
+individuals = [
+    b_PB,
+    b_IB,
+    b_DB_gender,
+    b_DB_age,
+    b_DB_occupation,
+    b_DB_zipcode
+]
+
+# Step 2: Define interaction terms
+interactions = []
+
+# PB ⊙ each DB dimension
+for db in [b_DB_gender, b_DB_age, b_DB_occupation, b_DB_zipcode]:
+    interactions.append(b_PB * db)
+
+# IB ⊙ each DB dimension
+for db in [b_DB_gender, b_DB_age, b_DB_occupation, b_DB_zipcode]:
+    interactions.append(b_IB * db)
+
+# All pairwise interactions between DB dimensions
+db_list = [b_DB_gender, b_DB_age, b_DB_occupation, b_DB_zipcode]
+for i in range(len(db_list)):
+    for j in range(i + 1, len(db_list)):
+        interactions.append(db_list[i] * db_list[j])
+
+# Step 3: Concatenate everything
+jbf_input = torch.cat(individuals + interactions, dim=1)
+
+# Step 4: Define linear layer and activation (if not already defined)
+input_dim = jbf_input.shape[1]
+W_jbf = nn.Linear(input_dim, 1)  # scalar per (u, i)
+sigma = nn.Sigmoid()
+
+# Step 5: Compute JBF*
+JBF_star = sigma(W_jbf(jbf_input))
+
+combined_biases['JBF_star'] = JBF_star.detach().numpy().flatten()
+
+input_dim = jbf_input.shape[1]
+extractor = ExplanationVectorExtractor(input_dim)
+
+# Extract E_ui
+E_ui = extractor(jbf_input)
+
+# Lets compare the collapsed jbf_input with the original
+bias_columns = ["PB", "IB", "DB_gender", "DB_age", "DB_occupation", "DB_zipcode"]
+E_ui_raw = combined_biases[bias_columns].apply(lambda row: softmax(row.values), axis=1)
+
+E_ui_raw_df = pd.DataFrame(E_ui_raw.tolist(), columns=[f"E_raw_{col}" for col in bias_columns])
+
+# Convert E_ui into a dataframe
+E_ui_np = E_ui.detach().cpu().numpy()
+
+# Create DataFrame
+bias_labels = ["PB", "IB", "DB_gender", "DB_age", "DB_occupation", "DB_zipcode"]
+E_ui_df = pd.DataFrame(E_ui_np, columns=[f"E_learned_{col}" for col in bias_labels])
+
+combined_df = pd.concat([E_ui_raw_df, E_ui_df], axis=1)
+
+# Compute difference columns
+for col in bias_labels:
+    combined_df[f"delta_{col}"] = combined_df[f"E_learned_{col}"] - combined_df[f"E_raw_{col}"]
+
+# Set your Groq API key
+client = OpenAI(
+    api_key="GROQ_API_KEY_REMOVED",
+    base_url="https://api.groq.com/openai/v1"
+)
+
+popularity = ratings.groupby("MovieID").size().reset_index(name="num_ratings")
+movie = movie.merge(popularity, on="MovieID", how="left")
+
+# Label popularity: high if in top 25%
+threshold = movie["num_ratings"].quantile(0.75)
+movie["popularity"] = movie["num_ratings"].apply(lambda x: "high" if x >= threshold else "low")
+
+combined_df['UserID'] = ratings['UserID']
+combined_df['MovieID'] = ratings['MovieID']
+
+# Generate explanations row by row
+explanations = []
+
+# Take 10000 rows for the experiment
+experiment_df = combined_df.head(100)
+
+theta_u_values = np.random.rand(len(experiment_df))
+experiment_df['theta_u'] = theta_u_values
+
+count = 1
+for i, row in experiment_df.iterrows():
+    user_id = row["UserID"]
+    item_id = row["MovieID"]
+    theta_u = row["theta_u"]
+
+    E_ui = get_E_ui(row)
+    X_u = get_X_u(user_id,user)
+    M_i = get_M_i(item_id,movie)
+
+    try:
+        #explanation = build_theta_explanation(E_ui, X_u, M_i, theta_u, temperature=0.9)
+        explanation = generate_llm_explanation(E_ui, X_u, M_i, theta_u, temperature=0.9)
+    except Exception as e:
+        explanation = f"Failed to generate: {e}"
+
+    print(count, ": ", explanation)
+    explanations.append(explanation)
+    count += 1

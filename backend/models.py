@@ -1,5 +1,19 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class ExplanationVectorExtractor(nn.Module):
+    def __init__(self, input_dim):
+        super(ExplanationVectorExtractor, self).__init__()
+        self.proj = nn.Linear(input_dim, 6)  # Outputs: PB, IB, DB (collapsed)
+
+    def forward(self, jbf_input):
+        raw_bias_scores = self.proj(jbf_input)  # shape: (batch, 6)
+        explanation_vector = F.softmax(raw_bias_scores, dim=1)
+        return explanation_vector  # [PB, IB, DB]
+
 
 class Recommendation(BaseModel):
     movie_id: str
