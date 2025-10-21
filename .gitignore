@@ -29,6 +29,7 @@ dist-ssr
 
 # Ignore Firebase service account key
 backend/serviceAccountKey.json
+backend/.env
 
 #Python / backend
 __pycache__/

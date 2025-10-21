@@ -10,6 +10,9 @@ from models import ExplanationVectorExtractor
 from scipy.special import softmax
 from openai import OpenAI
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # ---------------------------
 # expose a function the API can call
@@ -203,7 +206,7 @@ def compute_explanations(limit: int = 10):
         combined_df[f"delta_{col}"] = combined_df[f"E_learned_{col}"] - combined_df[f"E_raw_{col}"]
 
     client = OpenAI(
-        api_key="GROQ_API_KEY_REMOVED",
+        api_key=os.getenv("GROQ_API_KEY"),
         base_url="https://api.groq.com/openai/v1"
     )
 
