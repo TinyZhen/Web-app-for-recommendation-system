@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import { fetchRecommendations } from '../lib/api.js';
 import { useAuth } from '../auth/AuthProvider';
+import { useLocation } from 'react-router-dom'; // ⬅️ NEW
 
 export default function Recommend() {
   const { user, loading: authLoading } = useAuth();
+  const location = useLocation(); // ⬅️ NEW
+  const explanations = location.state?.explanations || []; // ⬅️ NEW
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -22,9 +26,7 @@ export default function Recommend() {
         if (active) setLoading(false);
       }
     })();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [authLoading, user]);
 
   return (
@@ -37,6 +39,21 @@ export default function Recommend() {
             <p style={{ fontSize: '0.9rem', color: '#666' }}>
               Current user UID: <strong>{user.uid}</strong>
             </p>
+          )}
+
+          {/* ⬇️ NEW: show explanations (if passed from Survey) */}
+          {explanations.length > 0 && (
+            <div style={{ margin: '16px 0' }}>
+              <h3 style={{ marginBottom: 8 }}>Why these picks (experiment):</h3>
+              <ol style={{ paddingLeft: 18 }}>
+                {explanations.map((line, idx) => (
+                  <li key={idx} style={{ marginBottom: 6, whiteSpace: 'pre-wrap' }}>
+                    {line}
+                  </li>
+                ))}
+              </ol>
+              <hr style={{ margin: '16px 0' }} />
+            </div>
           )}
 
           {loading && <p className="muted">Loading recommendations…</p>}

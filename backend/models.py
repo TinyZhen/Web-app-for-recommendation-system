@@ -21,9 +21,17 @@ class Recommendation(BaseModel):
     score: float = Field(ge=0)
     reason: Optional[str] = None
 
+class Favorites(BaseModel):
+    movie_id: str
+    title: str
+    
 class RecsResponse(BaseModel):
     user_uid: str
     items: List[Recommendation]
+
+class FavsResponse(BaseModel):
+    user_uid: str
+    items: List[Favorites]
 
 def build_explanation_prompt(E_ui, X_u, M_i, theta_u):
     """

@@ -4,7 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from firebase_admin import auth as fb_auth
 from firebase_admin_init import init_firebase_app
-from models import Recommendation, RecsResponse
+from models import Recommendation, RecsResponse, Favorites,FavsResponse
+from typing import List
+
+# ⬇️ import the callable from combined_biases
+from combined_biases import compute_explanations
 
 load_dotenv()
 init_firebase_app()
@@ -21,9 +25,6 @@ app.add_middleware(
 )
 
 async def get_current_user(authorization: str | None = Header(default=None)) -> str:
-    """Extract and verify Firebase ID token from Authorization header.
-    Returns: user uid.
-    """
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
     token = authorization.split(" ", 1)[1]
@@ -47,3 +48,18 @@ async def recommendations(uid: str = Depends(get_current_user)):
         Recommendation(movie_id="tt0109830", title="Forrest Gump", score=0.91, reason="Popular feel‑good drama")
     ]
     return RecsResponse(user_uid=uid, items=mock)
+
+# ⬇️ API to run the Python pipeline and return explanations
+@app.post("/run-combined-biases")
+def run_combined_biases(limit: int = 100) -> dict:
+    explanations: List[str] = compute_explanations(limit=limit)
+    return {"explanations": explanations}
+
+@app.post("/favorites", response_model=FavsResponse)
+def favorites(uid: str = Depends(get_current_user)):
+    mock = [
+        Favorites(movie_id="tt0122093", title="The Matrix"),
+        Favorites(movie_id="tt0816692", title="Interstellar"),
+        Favorites(movie_id="tt0109830", title="Forrest Gump")
+    ]
+    return FavsResponse(user_uid=uid, items=mock)

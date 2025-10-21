@@ -28,3 +28,15 @@ async function authFetch(path, options = {}) {
 export async function fetchRecommendations() {
   return authFetch('/recommend');
 }
+
+// NEW: trigger the backend job that runs combined_biases
+export async function runCombinedBiases(limit = 10) {
+  // FastAPI endpoint expects query param (not JSON body)
+  return authFetch(`/run-combined-biases?limit=${encodeURIComponent(limit)}`, {
+    method: 'POST'
+  });
+}
+
+export async function fetchFavorites(){
+  return authFetch('/favorites', {method:'POST'});
+}

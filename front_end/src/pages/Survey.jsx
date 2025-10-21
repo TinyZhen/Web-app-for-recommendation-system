@@ -1,8 +1,7 @@
 // src/pages/Survey.jsx
 import { useEffect, useMemo, useState } from "react";
-import { db } from "../firebase"; // 
-// If you track user auth, you can import auth and use currentUser.uid
-// import { auth } from "../firebase";
+import { useNavigate } from "react-router-dom";
+import { db } from "../firebase";
 import { useAuth } from "../auth/AuthProvider";
 import {
   addDoc,
@@ -15,6 +14,9 @@ import {
   setDoc,
   doc,
 } from "firebase/firestore";
+
+// ⬇️ NEW: call the backend pipeline
+import { runCombinedBiases } from "../lib/api";
 
 const NUM_QUESTIONS = 20;
 
@@ -41,6 +43,7 @@ const normalize = (g) => String(g || "").trim();
 
 export default function Survey() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [movies, setMovies] = useState([]);
@@ -148,6 +151,17 @@ export default function Survey() {
           );
         })
       );
+
+      // ⬇️ NEW: run the backend pipeline, then navigate with results
+      let explanations = [];
+      try {
+        const resp = await runCombinedBiases(10); // or 100 if you like
+        explanations = resp.explanations || [];
+      } catch (err) {
+        console.warn("runCombinedBiases failed:", err);
+      }
+
+      navigate("/recommend", { state: { explanations } });
     } catch (e) {
       console.error(e);
       setError("Failed to submit responses. Please try again.");
@@ -190,5 +204,3 @@ export default function Survey() {
     </section>
   );
 }
-
-

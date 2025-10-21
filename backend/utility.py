@@ -1,3 +1,8 @@
+import pandas as pd
+import numpy as np
+import torch
+import torch.nn as nn
+from sklearn.preprocessing import MinMaxScaler
 #Define reusable E_ui extractor
 def get_E_ui(row):
     return {
@@ -111,7 +116,7 @@ def generate_llm_explanation(E_ui, X_u, M_i, client, theta_u, temperature=0.7):
         return f"[LLM generation failed] {e}"
     
 # --- Proportional Demographic Bias (DB) helpers ---
-def compute_proportional_demographic_bias(ratings_df: pd.DataFrame, users_df: pd.DataFrame, group_field: str) -> pd.DataFrame:
+def compute_proportional_demographic_bias(ratings_df: pd.DataFrame, users_df: pd.DataFrame, group_field: str, scaler) -> pd.DataFrame:
     """Returns columns: ['UserID','MovieID', f'DB_{group_field_normalized}']"""
     bias_col = "DB_" + group_field.lower().replace("-", "")
 
