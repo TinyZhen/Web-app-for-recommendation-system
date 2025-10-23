@@ -31,4 +31,4 @@ serviceAccountKey.json content: <br>
 GOOGLE_APPLICATION_CREDENTIALS=serviceAccountKey.json <br>
 ALLOWED_ORIGINS=http://localhost:5173 <br>
 PORT=8000 <br>
-
+4. Copy Groq API Key by generating a api key for you in GroqCloud and past it in GROQ_API_KEY in .env of backend
