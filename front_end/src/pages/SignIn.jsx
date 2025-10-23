@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
+import './SignIn.css';
 
 export default function SignIn() {
   const nav = useNavigate();
@@ -17,7 +18,7 @@ export default function SignIn() {
 
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
-      nav('/recommend', { replace: true });
+      nav('/survey', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -26,8 +27,8 @@ export default function SignIn() {
   }
 
   return (
-    <div className="center">
-      <div className="card">
+    <div className="auth-container">
+      <div className="auth-card">
         <h1>Sign In</h1>
         <p className="muted">Welcome back. Use your email and password.</p>
 

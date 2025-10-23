@@ -17,7 +17,7 @@ import {
 
 // ⬇️ NEW: call the backend pipeline
 import { runCombinedBiases } from "../lib/api";
-
+import './Survey.css'
 const NUM_QUESTIONS = 20;
 
 function sampleOne(arr) {
@@ -175,31 +175,51 @@ export default function Survey() {
   if (submittedId) return <section className="p-6">Thank you! Your survey ID: {submittedId}</section>;
 
   return (
-    <section className="max-w-3xl mx-auto p-6">
-      <h2 className="text-2xl font-semibold mb-2">Survey</h2>
-      <form onSubmit={onSubmit} className="space-y-6">
-        {movies.map((m, idx) => (
-          <div key={m.id} className="border p-4 rounded-lg">
-            <h3 className="font-semibold">{idx + 1}. {m.title}</h3>
-            <div className="flex gap-4 mt-2">
-              {[1, 2, 3, 4, 5].map((v) => (
-                <label key={v}>
-                  <input
-                    type="radio"
-                    name={`rating-${m.id}`}
-                    value={v}
-                    checked={ratings[m.id] === v}
-                    onChange={(e) => onRate(m.id, e.target.value)}
-                    required
-                  /> {v}
-                </label>
-              ))}
-            </div>
-          </div>
-        ))}
-        <button type="submit" disabled={!allAnswered || submitting} className="bg-black text-white px-4 py-2 rounded">
-          {submitting ? "Submitting…" : "Submit"}
-        </button>
+    <section className="survey-shell">
+      <h2 className="survey-title">Movie Survey</h2>
+      <p className="survey-sub">Rate your favorite movies to get personalized recommendations!</p>
+
+      <form onSubmit={onSubmit}>
+        <div className="survey-grid">
+          {movies.length === 0 ? (
+            <p>No movies found.</p>
+          ) : (
+            movies.map((m, idx) => (
+              <div key={m.id} className="survey-card">
+                <div className="card-left">
+                  <div className="poster-frame">
+                    <img
+                      src={m.poster || "https://via.placeholder.com/110x160"}
+                      alt={m.title}
+                      className="poster-img"
+                    />
+                  </div>
+                </div>
+                <div className="card-right">
+                  <h3 className="card-title">{idx + 1}. {m.title || m.name}</h3>
+                  <div className="card-meta">{(m.genres || []).join(", ")}</div>
+                  <div className="rating-row">
+                    {[1, 2, 3, 4, 5].map((v) => (
+                      <div
+                        key={v}
+                        className={`rate-pill ${ratings[m.id] === v ? "active" : ""}`}
+                        onClick={() => onRate(m.id, v)}
+                      >
+                        <span className="pill-text">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="floating-submit">
+          <button type="submit" className="submit-btn" disabled={!allAnswered || submitting}>
+            {submitting ? "Submitting…" : "Submit"}
+          </button>
+        </div>
       </form>
     </section>
   );

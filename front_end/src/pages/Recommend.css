@@ -1,0 +1,77 @@
+/* Recommend.css */
+
+/* Full-page background image */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Poppins', sans-serif;
+    background: url('../assets/bg.jpg') no-repeat center center fixed;
+    background-size: cover;
+  }
+  
+  /* Main container centers content */
+  .container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  
+  /* Glass card for recommendations */
+  .rec-card {
+    background: rgba(0, 0, 0, 0.6); /* semi-transparent dark */
+    backdrop-filter: blur(10px);    /* glass effect */
+    -webkit-backdrop-filter: blur(10px); /* Safari */
+    border-radius: 20px;
+    padding: 30px 40px;
+    max-width: 700px;
+    width: 100%;
+    color: #fff;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Headings */
+  .rec-card h2 {
+    margin-top: 0;
+    font-size: 2rem;
+    text-align: center;
+  }
+  
+  /* Muted text for scores or user info */
+  .muted {
+    color: #ccc;
+    font-size: 0.9rem;
+  }
+  
+  /* Error text */
+  .error {
+    color: #ff6b6b;
+    margin: 12px 0;
+  }
+  
+  /* List styling */
+  .rec-card ul {
+    list-style: none;
+    padding-left: 0;
+  }
+  
+  .rec-card li {
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+  
+  /* Optional: make links inside card stand out */
+  .rec-card a {
+    color: #1e90ff;
+    text-decoration: underline;
+  }
+  
+  .rec-card hr {
+    border: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.2);
+    margin: 20px 0;
+  }

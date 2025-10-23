@@ -1,0 +1,91 @@
+/* src/pages/Register.css */
+
+/* Full page container with background image */
+/* Container full height minus some top padding so nav bar doesn't overlap */
+.center {
+    min-height: calc(100vh - 70px); /* adjust 70px to your nav height */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 40px; /* extra space from top */
+    padding-bottom: 40px;
+    background: url('../assets/bg.jpg') no-repeat center center/cover;
+    position: relative;
+  }
+  
+  /* Glassy card */
+  /* Make sure this is the last rule in Register.css */
+  .card {
+    max-width: 480px !important;  /* force override */
+    width: 90%;                   /* responsive for smaller screens */
+    padding: 30px 25px;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 12px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: #fff;
+    margin: 0 auto;
+  }
+  
+  
+  
+  /* Input and select fields */
+  .card input,
+  .card select {
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    outline: none;
+    width: 100%;
+    margin-bottom: 10px;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+  
+  .card input::placeholder {
+    color: #eee;
+  }
+  
+  /* Button */
+  .btn.primary {
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    background-color: #e50914;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s ease;
+  }
+  
+  .btn.primary:hover {
+    background-color: #f6121d;
+  }
+  
+  /* Muted text */
+  .muted {
+    color: #ccc;
+    font-size: 0.9rem;
+  }
+  
+  /* Error message */
+  .error {
+    color: #ff4d4f;
+    font-size: 0.85rem;
+  }
+  
+  /* Link inside card */
+  .card a {
+    color: #e50914;
+    text-decoration: none;
+  }
+  
+  .card a:hover {
+    text-decoration: underline;
+  }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { fetchRecommendations } from '../lib/api.js';
 import { useAuth } from '../auth/AuthProvider';
 import { useLocation } from 'react-router-dom'; // ⬅️ NEW
+import './Recommend.css'
 
 export default function Recommend() {
   const { user, loading: authLoading } = useAuth();
