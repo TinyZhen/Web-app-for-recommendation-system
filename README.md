@@ -24,7 +24,7 @@ To get your firebaseConfig go to recommender-system project and click on project
 <br>
 serviceAccountKey.json content: <br>
 <br>
- To get the content go to recommender-system project and click on project settings of cs682 webapp and then click on Service Accounts and then click generate new private key by choosing Node.js under Admin SDK Configuration snippet and then click generate private key in pop up window and copy the code snippet which you will get and paste it in serviceAccountKey.json  <br>
+ To get the content go to recommender-system project and click on project settings of cs682 webapp and then click on Service Accounts and then click generate new private key by choosing Node.js under Admin SDK Configuration snippet and then click generate private key in pop up window and cand rename the downloaded file to serviceAccountKey.json and place it in backend folder  <br>
 <br>
 3. Create .env file in backend folder and paste the below code in it <br>
 <br>
