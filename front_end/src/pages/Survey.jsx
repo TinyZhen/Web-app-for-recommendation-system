@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 import { useAuth } from "../auth/AuthProvider";
+import fallbackPoster from "../assets/logo.png";
+
 import {
   addDoc,
   collection,
@@ -189,7 +191,7 @@ export default function Survey() {
                 <div className="card-left">
                   <div className="poster-frame">
                     <img
-                      src={m.poster || "https://via.placeholder.com/110x160"}
+                      src={m.poster || fallbackPoster}
                       alt={m.title}
                       className="poster-img"
                     />

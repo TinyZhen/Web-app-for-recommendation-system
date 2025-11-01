@@ -240,6 +240,26 @@ def compute_explanations(limit: int = 10):
         explanations.append(f"{count} : {explanation}")
         count += 1
 
+    # Just pick the first row
+    # first_row = experiment_df.iloc[0]
+
+    # user_id = first_row["UserID"]
+    # item_id = first_row["MovieID"]
+    # theta_u = first_row["theta_u"]
+
+    # e_ui_vec = get_E_ui(first_row)
+    # X_u = get_X_u(user_id, user)
+    # M_i = get_M_i(item_id, movie2)
+
+    # try:
+    #     explanation = generate_llm_explanation(
+    #         e_ui_vec, X_u, M_i, client=client, theta_u=theta_u, temperature=0.9
+    #     )
+    # except Exception as e:
+    #     explanation = f"Failed to generate: {e}"
+
+    # explanations = [f"1 : {explanation}"]
+
     return explanations
 
 

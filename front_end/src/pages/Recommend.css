@@ -1,77 +1,117 @@
-/* Recommend.css */
+/* Recommend.css — Full Glassmorphism with Background */
 
-/* Full-page background image */
 body, html {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    font-family: 'Poppins', sans-serif;
-    background: url('../assets/bg.jpg') no-repeat center center fixed;
-    background-size: cover;
-  }
-  
-  /* Main container centers content */
-  .container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    padding: 20px;
-  }
-  
-  /* Glass card for recommendations */
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Poppins', sans-serif;
+  overflow-x: hidden;
+  background: linear-gradient(180deg, rgba(0,0,0,0.7), rgba(0,0,0,0.5)), url('../assets/bg.jpg') no-repeat center center fixed;
+  background-size: cover;
+  color: #fff;
+}
+
+/* Main container centers content vertically */
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* Glass card for recommendations */
+.rec-card {
+  background: rgba(0, 0, 0, 0.85); /* darker for readability */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 40px 50px;
+  max-width: 800px;
+  width: 100%;
+  color: #fff;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow-y: auto; /* scroll if content is long */
+  max-height: 90vh; /* keeps it within viewport */
+}
+
+/* Headings */
+.rec-card h2 {
+  margin-top: 0;
+  font-size: 2rem;
+  text-align: center;
+  font-weight: 700;
+  text-shadow: 0 3px 12px rgba(0,0,0,0.7);
+}
+
+/* Muted text for scores or info */
+.muted {
+  color: #ccc;
+  font-size: 0.9rem;
+}
+
+/* Error text */
+.error {
+  color: #ff6b6b;
+  margin: 12px 0;
+}
+
+/* Recommendation list styling */
+.rec-card ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.rec-card li {
+  margin-bottom: 16px;
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+/* Links inside card */
+.rec-card a {
+  color: #1e90ff;
+  text-decoration: underline;
+}
+
+/* Separator line */
+.rec-card hr {
+  border: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 20px 0;
+}
+
+/* Scrollbar for long content */
+.rec-card::-webkit-scrollbar {
+  width: 8px;
+}
+
+.rec-card::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
+}
+
+.rec-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
   .rec-card {
-    background: rgba(0, 0, 0, 0.6); /* semi-transparent dark */
-    backdrop-filter: blur(10px);    /* glass effect */
-    -webkit-backdrop-filter: blur(10px); /* Safari */
-    border-radius: 20px;
-    padding: 30px 40px;
-    max-width: 700px;
-    width: 100%;
-    color: #fff;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 30px 25px;
   }
-  
-  /* Headings */
   .rec-card h2 {
-    margin-top: 0;
-    font-size: 2rem;
-    text-align: center;
+      font-size: 1.6rem;
   }
-  
-  /* Muted text for scores or user info */
-  .muted {
-    color: #ccc;
-    font-size: 0.9rem;
+}
+
+@media (max-width: 420px) {
+  .rec-card {
+      padding: 20px 16px;
   }
-  
-  /* Error text */
-  .error {
-    color: #ff6b6b;
-    margin: 12px 0;
+  .rec-card h2 {
+      font-size: 1.4rem;
   }
-  
-  /* List styling */
-  .rec-card ul {
-    list-style: none;
-    padding-left: 0;
-  }
-  
-  .rec-card li {
-    margin-bottom: 12px;
-    line-height: 1.4;
-  }
-  
-  /* Optional: make links inside card stand out */
-  .rec-card a {
-    color: #1e90ff;
-    text-decoration: underline;
-  }
-  
-  .rec-card hr {
-    border: 0;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.2);
-    margin: 20px 0;
-  }
+}
