@@ -30,10 +30,10 @@ serviceAccountKey.json content: <br>
 <br>
 GOOGLE_APPLICATION_CREDENTIALS=serviceAccountKey.json <br>
 ALLOWED_ORIGINS=http://localhost:5173 <br>
-PORT=8000 <br>
-4. Copy Groq API Key by generating a api key for you in GroqCloud and past it in GROQ_API_KEY in .env of backend
-5. Do npm install in front_end and fast_api in backend folders
+PORT=8000 <br><br>
+4. Copy Groq API Key by generating a api key for you in GroqCloud and past it in GROQ_API_KEY in .env of backend<br><br>
+5. Do npm install in front_end and fast_api in backend folders <br><br>
 6. In front_end folder execute the following command: <br>
-   npm run dev <br>
+   npm run dev <br><br>
 7. In backend folder execute the following command: <br>
  uvicorn main:app --reload --port 8000  <br>
