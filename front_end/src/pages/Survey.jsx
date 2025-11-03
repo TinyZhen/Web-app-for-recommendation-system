@@ -227,345 +227,53 @@
 //   );
 // }
 
-
-// src/pages/Survey.jsx
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { db } from "../firebase";
+import { collection, getDoc, getDocs, limit, query, doc } from "firebase/firestore";
 import { useAuth } from "../auth/AuthProvider";
-import fallbackPoster from "../assets/logo.png";
+import PersonalInfoForm from "../components/PersonalInfoForm";
+import MovieSurvey from "../components/MovieSurvey";
+import "../style/Survey.css";
 
-import {
-  addDoc,
-  collection,
-  getDocs,
-  limit,
-  query,
-  serverTimestamp,
-  setDoc,
-  doc,
-} from "firebase/firestore";
-
-import { runCombinedBiases } from "../lib/api";
-import "./Survey.css";
-
-// ---- helpers ------------------------------------------------------
-const parseGenres = (gArr, gStr) => {
-  if (Array.isArray(gArr) && gArr.length) return gArr.map((x) => String(x).trim());
-  if (typeof gStr === "string" && gStr.length) {
-    return gStr
-      .split("|")
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-  return [];
-};
-
-const uniq = (arr) => Array.from(new Set(arr));
-const ratingKey = (movieId) => `rating:${movieId}`;
-const getLocalRating = (movieId) => Number(localStorage.getItem(ratingKey(movieId))) || 0;
-const setLocalRating = (movieId, rating) => localStorage.setItem(ratingKey(movieId), String(rating));
-
-function StarRating({ value, onChange, size = 20 }) {
-  return (
-    <div className="stars" role="radiogroup" aria-label="Rate">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          type="button"
-          className="star"
-          aria-checked={value === n}
-          role="radio"
-          onClick={() => onChange(n)}
-          title={`${n} star${n > 1 ? "s" : ""}`}
-          style={{ fontSize: size }}
-        >
-          {n <= value ? "★" : "☆"}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// ---- component ----------------------------------------------------
 export default function Survey() {
-  const navigate = useNavigate();
   const { user } = useAuth();
-
-  const [loading, setLoading] = useState(true);
+  const [step, setStep] = useState(1);
+  const [checking, setChecking] = useState(true);
   const [error, setError] = useState("");
-
-  // raw movie docs (we’ll keep enough for filtering on the client)
   const [allMovies, setAllMovies] = useState([]);
 
-  // UI state
-  const [search, setSearch] = useState("");
-  const [selectedGenre, setSelectedGenre] = useState("All");
-
-  // ratings map: movieId -> 1..5
-  const [ratings, setRatings] = useState({});
-  const [submitting, setSubmitting] = useState(false);
-  const [submittedId, setSubmittedId] = useState(null);
-
-  // ------- load movies (one time) ---------------------------------
   useEffect(() => {
+    if (!user?.uid) return;
     (async () => {
-      setLoading(true);
-      setError("");
-      try {
-        // Pull a chunk of movies; adjust limit if you need more
-        const snap = await getDocs(query(collection(db, "movies"), limit(1000)));
-        const rows = snap.docs.map((d) => {
-          const data = d.data() || {};
-          const genres = parseGenres(data.genres, data.genresStr);
-          const movieId = String(data.movieId || d.id);
-
-          // seed ratings from localStorage for a nicer UX
-          const seed = getLocalRating(movieId);
-
-          return {
-            id: d.id, // firestore doc id
-            movieId,
-            title: data.title || data.name || "Untitled",
-            genres,
-            poster: data.poster || data.image || null,
-            _seedRating: seed,
-          };
-        });
-
-        setAllMovies(rows);
-        // prime state ratings from localStorage
-        if (rows.length) {
-          const seeded = {};
-          rows.forEach((m) => {
-            if (m._seedRating > 0) seeded[m.movieId] = m._seedRating;
-          });
-          if (Object.keys(seeded).length) setRatings((r) => ({ ...seeded, ...r }));
-        }
-      } catch (e) {
-        console.error(e);
-        setError("Failed to load movies. Please verify your Firestore collection.");
-      } finally {
-        setLoading(false);
+      const ref = doc(db, "users", user.uid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const d = snap.data();
+        if (d.gender || d.age || d.occupation || d.zipcode) setStep(2);
       }
+      setChecking(false);
     })();
-  }, []);
+  }, [user]);
 
-  // ------- derived data -------------------------------------------
-  const allGenres = useMemo(() => {
-    const g = allMovies.flatMap((m) => m.genres);
-    return ["All", ...uniq(g).sort((a, b) => a.localeCompare(b))];
-  }, [allMovies]);
+  useEffect(() => {
+    if (step !== 2) return;
+    (async () => {
+      const snap = await getDocs(query(collection(db, "movies")));
+      const rows = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          title: data.title || data.name || data.movie_title || "Untitled",
+          genres: data.genres || [],
+          poster: data.poster || null,
+        };
+      });
 
-  const lcQuery = search.trim().toLowerCase();
-  const matchesSearch = (m) => !lcQuery || m.title.toLowerCase().includes(lcQuery);
-  const matchesGenre = (m) =>
-    selectedGenre === "All" ? true : Array.isArray(m.genres) && m.genres.includes(selectedGenre);
+      setAllMovies(rows);
+    })();
+  }, [step]);
 
-  // group shown at the top (must match both filters)
-  const selectedGroup = useMemo(
-    () => allMovies.filter((m) => matchesSearch(m) && matchesGenre(m)),
-    [allMovies, search, selectedGenre]
-  );
-
-  // full list (affected by search only)
-  const allList = useMemo(() => allMovies.filter(matchesSearch), [allMovies, search]);
-
-  // ------- interactions -------------------------------------------
-  const setRating = (movie, n) => {
-    setRatings((r) => {
-      const next = { ...r, [movie.movieId]: n };
-      setLocalRating(movie.movieId, n); // persist locally, too
-      return next;
-    });
-  };
-
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError("");
-    try {
-      const uid = user?.uid || "anonymous";
-
-      // collect only rated movies
-      const rated = allMovies
-        .filter((m) => Number(ratings[m.movieId]) > 0)
-        .map((m) => ({
-          movieId: m.movieId,
-          title: m.title,
-          genres: m.genres,
-          rating: Number(ratings[m.movieId]),
-        }));
-
-      if (rated.length === 0) {
-        setError("Please rate at least one movie before submitting.");
-        setSubmitting(false);
-        return;
-      }
-
-      // surveyResponses
-      const payload = {
-        userId: uid,
-        createdAt: serverTimestamp(),
-        filters: {
-          search: lcQuery || null,
-          selectedGenre: selectedGenre === "All" ? null : selectedGenre,
-        },
-        answers: rated,
-      };
-
-      const docRef = await addDoc(collection(db, "surveyResponses"), payload);
-      setSubmittedId(docRef.id);
-
-      // ratings (one per movie)
-      await Promise.all(
-        rated.map((r) => {
-          const rid = `${uid}_${r.movieId}`;
-          return setDoc(
-            doc(db, "ratings", rid),
-            {
-              userId: uid,
-              movieId: r.movieId,
-              rating: r.rating,
-              timestamp: serverTimestamp(),
-              title: r.title,
-              genres: r.genres,
-              surveyRef: docRef.id,
-            },
-            { merge: true }
-          );
-        })
-      );
-
-      // optional backend pipeline
-      let explanations = [];
-      try {
-        const resp = await runCombinedBiases(10);
-        explanations = resp?.explanations || [];
-      } catch (err) {
-        console.warn("runCombinedBiases failed:", err);
-      }
-
-      navigate("/recommend", { state: { explanations } });
-    } catch (e) {
-      console.error(e);
-      setError("Failed to submit responses. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // ------- render --------------------------------------------------
-  if (loading) return <section className="p-6">Loading movies…</section>;
-  if (error) return <section className="p-6 text-red-600">{error}</section>;
-  if (submittedId) return <section className="p-6">Thank you! Your survey ID: {submittedId}</section>;
-
-  return (
-    <section className="survey-shell">
-      <h2 className="survey-title">Rate Movies</h2>
-      <p className="survey-sub">
-        Search, filter by genre, and rate movies with the ⭐ bar. Your selections are saved locally
-        and submitted to improve recommendations.
-      </p>
-
-      {/* Controls */}
-      <div className="controls-row">
-        <input
-          className="search-input"
-          placeholder="Search movie title…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <select
-          className="genre-select"
-          value={selectedGenre}
-          onChange={(e) => setSelectedGenre(e.target.value)}
-        >
-          {allGenres.map((g) => (
-            <option key={g} value={g}>
-              {g}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          className="btn-reset"
-          onClick={() => {
-            setSearch("");
-            setSelectedGenre("All");
-          }}
-        >
-          Reset
-        </button>
-      </div>
-
-      {/* Chips / stats */}
-      <div className="chips">
-        <span className="chip">Total: {allMovies.length}</span>
-        <span className="chip">Genres: {Math.max(0, allGenres.length - 1)}</span>
-        {search ? <span className="chip">Search: “{search}”</span> : null}
-        {selectedGenre !== "All" ? <span className="chip">Genre: {selectedGenre}</span> : null}
-      </div>
-
-      {/* Selected Genre Group */}
-      <section className="group">
-        <h3 className="group-title">
-          Selected Genre <span className="badge">{selectedGenre}</span>
-        </h3>
-        <div className="legend">Movies that match both the search and chosen genre.</div>
-        <div className="grid-list">
-          {selectedGroup.length === 0 ? (
-            <div className="muted">No movies match the current filters.</div>
-          ) : (
-            selectedGroup.map((m) => (
-              <article key={m.id} className="movie-card">
-                <div className="poster-frame">
-                  <img src={m.poster || fallbackPoster} alt={m.title} className="poster-img" />
-                </div>
-                <div className="movie-body">
-                  <div className="movie-title">{m.title}</div>
-                  <div className="movie-sub">{m.genres.join(" · ")}</div>
-                  <StarRating
-                    value={Number(ratings[m.movieId]) || 0}
-                    onChange={(n) => setRating(m, n)}
-                  />
-                </div>
-              </article>
-            ))
-          )}
-        </div>
-      </section>
-
-      {/* All Movies (search only) */}
-      <section className="group">
-        <h3 className="group-title">All Movies</h3>
-        <div className="legend">Full catalog (affected by search only).</div>
-        <div className="grid-list">
-          {allList.map((m) => (
-            <article key={m.id} className="movie-card">
-              <div className="poster-frame">
-                <img src={m.poster || fallbackPoster} alt={m.title} className="poster-img" />
-              </div>
-              <div className="movie-body">
-                <div className="movie-title">{m.title}</div>
-                <div className="movie-sub">{m.genres.join(" · ")}</div>
-                <StarRating
-                  value={Number(ratings[m.movieId]) || 0}
-                  onChange={(n) => setRating(m, n)}
-                />
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <form onSubmit={onSubmit}>
-        <div className="floating-submit">
-          <button type="submit" className="submit-btn" disabled={submitting}>
-            {submitting ? "Submitting…" : "Submit"}
-          </button>
-        </div>
-      </form>
-    </section>
-  );
+  if (checking) return <p>Checking profile...</p>;
+  if (step === 1) return <PersonalInfoForm user={user} onNext={() => setStep(2)} error={error} setError={setError} />;
+  return <MovieSurvey allMovies={allMovies} setAllMovies={setAllMovies} />;
 }

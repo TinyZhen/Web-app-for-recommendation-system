@@ -13,7 +13,7 @@
 // src/pages/Home.jsx
 import React from "react";
 import { Link } from "react-router-dom";
-import "./Home.css"; // We'll create this CSS next
+import "../style/Home.css"; // We'll create this CSS next
 
 export default function Home() {
   return (

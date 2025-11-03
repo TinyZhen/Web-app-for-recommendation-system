@@ -2,8 +2,8 @@
 import { NavLink } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase.js";
-import { useAuth } from "../auth/AuthProvider.jsx"; 
-import './Navbar.css';
+import { useAuth } from "../auth/AuthProvider.jsx";
+import '../style/Navbar.css';
 import logo from '../assets/logo.png'; // replace with your logo path
 
 export default function Navbar() {
@@ -28,7 +28,7 @@ export default function Navbar() {
           <span className="nav-loading">Loading...</span>
         ) : user ? (
           <div className="user-info">
-            <span className="user-email">👋 {user.email}</span>
+            <span className="user-name">👋 {user.displayName}</span>
             <button className="btn-logout" onClick={() => signOut(auth)}>
               Logout
             </button>
@@ -36,7 +36,7 @@ export default function Navbar() {
         ) : (
           <>
             <NavLink to="/signin" className="nav-link nav-register">Sign In/Register</NavLink>
-            
+
           </>
         )}
       </div>

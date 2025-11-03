@@ -1,6 +1,8 @@
 import { auth } from '../firebase.js';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const OMDB_API_KEY = import.meta.env.VITE_OMDB_API_KEY;
+
 
 async function authFetch(path, options = {}) {
   const user = auth.currentUser;
@@ -37,6 +39,39 @@ export async function runCombinedBiases(limit = 10) {
   });
 }
 
-export async function fetchFavorites(){
-  return authFetch('/favorites', {method:'POST'});
+export async function fetchFavorites() {
+  return authFetch('/favorites', { method: 'POST' });
+}
+
+export async function fetchOmdbData(title) {
+  if (!title) return null;
+
+  let cleanTitle = title
+    .replace(/\s*\(\d{4}\)\s*$/, "")
+    .trim();
+
+  const match = cleanTitle.match(/(.+),\s*(The|A|An)$/i);
+  if (match) {
+    cleanTitle = `${match[2]} ${match[1]}`;
+  }
+
+  const url = `https://www.omdbapi.com/?apikey=${OMDB_API_KEY}&t=${encodeURIComponent(cleanTitle)}`;
+  console.log("Fetching OMDb for:", cleanTitle, "→", url);
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.Response === "False") return null;
+    return {
+      poster: data.Poster !== "N/A" ? data.Poster : null,
+      plot: data.Plot || "",
+      year: data.Year,
+      director: data.Director,
+      actors: data.Actors,
+      genre: data.Genre,
+    };
+  } catch (e) {
+    console.warn("OMDb fetch error:", e);
+    return null;
+  }
 }
