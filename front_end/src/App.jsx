@@ -9,6 +9,7 @@ import Register from "./pages/Register.jsx";
 import { AuthProvider, useAuth } from "./auth/AuthProvider.jsx";
 import PrivateRoute from "./auth/PrivateRoute.jsx";
 import Navbar from "./pages/Navbar.jsx";
+import Profile from "./pages/personal.jsx";
 // import { signOut } from "firebase/auth";
 // import { auth } from "./firebase";
 
@@ -75,6 +76,8 @@ export default function App() {
             <Route path="/survey" element={<Survey />} />
             <Route path="/recommend" element={<Recommend />} />
             <Route path="/favorites" element={<Favorites />} />
+            <Route path="/profile" element={<Profile />} />
+
           </Route>
 
           {/* fallback */}
