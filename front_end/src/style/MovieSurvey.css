@@ -95,8 +95,6 @@
 .movie-plot {
     margin-bottom: 8px;
     display: -webkit-box;
-    -webkit-line-clamp: 4;
-    /* 限制行数 */
     -webkit-box-orient: vertical;
     overflow: hidden;
 }

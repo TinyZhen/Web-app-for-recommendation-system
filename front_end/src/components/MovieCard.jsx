@@ -43,7 +43,6 @@ export default function MovieCard({ movie, info, expanded, loading, rating, onTo
                     </div>
                 )}
 
-                {/* ✅ 星级评分（阻止点击冒泡，不触发 onToggle） */}
                 <div onClick={(e) => e.stopPropagation()}>
                     <StarRating value={rating || 0} onChange={onRate} />
                 </div>

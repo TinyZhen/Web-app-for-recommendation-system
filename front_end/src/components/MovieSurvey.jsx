@@ -1,5 +1,5 @@
 // src/components/MovieSurvey.jsx
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { fetchOmdbData } from "../lib/api";
 import "../style/MovieSurvey.css";
 import { db } from "../firebase";
@@ -10,16 +10,20 @@ import {
     orderBy,
     query,
     startAfter,
+    addDoc,
+    doc,
+    setDoc,
+    serverTimestamp,
 } from "firebase/firestore";
 import MovieCard from "./MovieCard";
 import { useAuth } from "../auth/AuthProvider";
-import { addDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
 export default function MovieSurvey() {
     const { user } = useAuth();
     const navigate = useNavigate();
 
+    // -------------------- State --------------------
     const [movies, setMovies] = useState([]);
     const [expanded, setExpanded] = useState({});
     const [details, setDetails] = useState({});
@@ -27,18 +31,18 @@ export default function MovieSurvey() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    // ✅ Pagination states
+    // Pagination
     const [pageSize] = useState(30);
     const [lastDoc, setLastDoc] = useState(null);
     const [hasMore, setHasMore] = useState(true);
 
-    // ✅ Filter states
+    // Filters
     const [search, setSearch] = useState("");
     const [genre, setGenre] = useState("All");
     const [year, setYear] = useState("All");
     const [ratingFilter, setRatingFilter] = useState("All");
 
-    // reset when filters change
+    // Reload data when filters change
     useEffect(() => {
         setMovies([]);
         setLastDoc(null);
@@ -46,7 +50,7 @@ export default function MovieSurvey() {
         loadMovies(true);
     }, [search, genre, year, ratingFilter]);
 
-    // 🔍 load movies (paged Firestore query)
+    // -------------------- Fetch & Filter --------------------
     async function loadMovies(reset = false) {
         if (loading) return;
         if (!hasMore && !reset) return;
@@ -55,8 +59,10 @@ export default function MovieSurvey() {
         setError("");
 
         try {
+            // Base query sorted by title
             let q = query(collection(db, "movies"), orderBy("title"), limit(pageSize));
 
+            // Continue from the last document if not reset
             if (lastDoc && !reset) {
                 q = query(
                     collection(db, "movies"),
@@ -78,7 +84,7 @@ export default function MovieSurvey() {
                 ...d.data(),
             }));
 
-            // ✅ 前端过滤逻辑
+            // Apply frontend filters
             const filtered = newDocs.filter((m) => {
                 const title = m.title?.toLowerCase() || "";
                 const matchSearch = !search || title.includes(search.toLowerCase());
@@ -86,6 +92,7 @@ export default function MovieSurvey() {
                     genre === "All" ||
                     (Array.isArray(m.genres) && m.genres.includes(genre)) ||
                     (typeof m.genres === "string" && m.genres.includes(genre));
+
                 const yearVal =
                     m.year ||
                     (m.title?.match(/\((\d{4})\)/)
@@ -96,6 +103,7 @@ export default function MovieSurvey() {
                     (year === "before2000" && yearVal < 2000) ||
                     (year === "2000to2010" && yearVal >= 2000 && yearVal <= 2010) ||
                     (year === "after2010" && yearVal > 2010);
+
                 const imdb = Number(m.imdbRating || m.rating || 0);
                 const matchRating =
                     ratingFilter === "All" ||
@@ -106,7 +114,7 @@ export default function MovieSurvey() {
                 return matchSearch && matchGenre && matchYear && matchRating;
             });
 
-            // ✅ enrich OMDb poster
+            // Enrich with OMDb poster data if missing
             const enriched = await Promise.all(
                 filtered.map(async (m) => {
                     if (m.poster) return m;
@@ -115,6 +123,7 @@ export default function MovieSurvey() {
                 })
             );
 
+            // Update state
             setMovies((prev) => (reset ? enriched : [...prev, ...enriched]));
             setLastDoc(snap.docs[snap.docs.length - 1]);
             setHasMore(snap.docs.length === pageSize);
@@ -126,21 +135,19 @@ export default function MovieSurvey() {
         }
     }
 
-    // Expand movie details
+    // -------------------- UI Handlers --------------------
     const toggleExpand = (m) =>
         setExpanded((prev) => ({ ...prev, [m.id]: !prev[m.id] }));
 
-    // ⭐ Rating change
     const onRate = (id, val) =>
         setRatings((r) => ({ ...r, [id]: val }));
 
-    // 💾 Submit to Firestore
-    // 💾 Submit to Firestore
+    // -------------------- Submit Ratings --------------------
     async function handleSubmit(e) {
         e.preventDefault();
         const uid = user?.uid || "anon";
 
-        // 只提交用户评分过的电影
+        // Only submit rated movies
         const ratedMovies = movies
             .filter((m) => ratings[m.id])
             .map((m) => ({
@@ -160,14 +167,14 @@ export default function MovieSurvey() {
         }
 
         try {
-            // 🧾 写入 surveyResponses
+            // Save survey metadata
             const surveyRef = await addDoc(collection(db, "surveyResponses"), {
                 userId: uid,
                 filters: { search, genre, year, ratingFilter },
                 createdAt: serverTimestamp(),
             });
 
-            // 🎬 同步写入 ratings 集合
+            // Save individual ratings
             for (const r of ratedMovies) {
                 await setDoc(
                     doc(db, "ratings", `${uid}_${r.movieId}`),
@@ -184,22 +191,23 @@ export default function MovieSurvey() {
                 );
             }
 
-            console.log("✅ All ratings saved!");
+            console.log("✅ Ratings successfully saved.");
             navigate("/recommend", { state: { fromSurvey: true } });
         } catch (err) {
-            console.error("❌ Firestore submit failed:", err);
+            console.error("❌ Firestore submission failed:", err);
             alert("Submit failed. Please try again.");
         }
-        navigate("/recommend", { state: { fromSurvey: true } });
     }
 
-
+    // -------------------- Render --------------------
     return (
         <section className="survey-shell">
             <h2 className="survey-title">🎬 Movie Survey</h2>
-            <p className="survey-sub">Filter movies by genre, year, and rating — then rate them!</p>
+            <p className="survey-sub">
+                Filter movies by genre, year, and rating — then rate your favorites!
+            </p>
 
-            {/* 🔍 Filters */}
+            {/* Filter controls */}
             <div className="controls-row">
                 <input
                     type="text"
@@ -245,7 +253,7 @@ export default function MovieSurvey() {
             {error && <p className="text-red-500">{error}</p>}
             {loading && <p>Loading...</p>}
 
-            {/* 🎬 Movie cards */}
+            {/* Movie grid */}
             <div className="grid-list">
                 {movies.map((m) => (
                     <MovieCard
@@ -260,7 +268,7 @@ export default function MovieSurvey() {
                 ))}
             </div>
 
-            {/* 🔽 Pagination */}
+            {/* Pagination */}
             {hasMore && !loading && (
                 <div className="load-more">
                     <button className="load-btn" onClick={() => loadMovies(false)}>
@@ -269,7 +277,7 @@ export default function MovieSurvey() {
                 </div>
             )}
 
-            {/* 🧾 Submit */}
+            {/* Submit button */}
             <div className="floating-submit">
                 <button className="submit-btn" onClick={handleSubmit}>
                     Submit Ratings
