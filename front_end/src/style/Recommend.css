@@ -1,81 +1,124 @@
-/* Recommend.css — Full Glassmorphism with Background */
-
-body, html {
+/* ==== GLOBAL STYLES ==== */
+body {
   margin: 0;
   padding: 0;
-  height: 100%;
   font-family: 'Poppins', sans-serif;
-  overflow-x: hidden;
-  background: linear-gradient(180deg, rgba(0,0,0,0.7), rgba(0,0,0,0.5)), url('../assets/bg.jpg') no-repeat center center fixed;
-  background-size: cover;
+  background: linear-gradient(135deg, #0a0a0a, #1c1c2e);
   color: #fff;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
-/* Main container centers content vertically */
+/* ==== HEADER ==== */
+.header {
+  text-align: center;
+  padding: 2rem 1rem;
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #00e0ff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px #00e0ff, 0 0 20px #00e0ff;
+  animation: glowText 3s infinite alternate;
+}
+
+@keyframes glowText {
+  from { text-shadow: 0 0 10px #00e0ff; }
+  to { text-shadow: 0 0 20px #00e0ff, 0 0 40px #00e0ff; }
+}
+
+/* ==== CONTAINER ==== */
 .container {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  min-height: 100vh;
-  padding: 20px;
+  padding: 2rem 1rem;
+  gap: 2rem;
 }
 
-/* Glass card for recommendations */
+/* ==== GLOWING RECOMMENDATION PANELS ==== */
 .rec-card {
-  background: rgba(0, 0, 0, 0.85); /* darker for readability */
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: 20px;
-  padding: 40px 50px;
-  max-width: 800px;
+  position: relative;
   width: 100%;
+  max-width: 800px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 20px;
+  padding: 2rem;
+  backdrop-filter: blur(10px);
   color: #fff;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  overflow-y: auto; /* scroll if content is long */
-  max-height: 90vh; /* keeps it within viewport */
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(0, 224, 255, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Headings */
+/* Neon animated glow border */
+.rec-card::before {
+  content: '';
+  position: absolute;
+  top: -2px; left: -2px; right: -2px; bottom: -2px;
+  border-radius: 20px;
+  background: linear-gradient(45deg, #00e0ff, #0078ff, #ff00ff, #00e0ff);
+  background-size: 400% 400%;
+  z-index: -1;
+  animation: glowingBorder 6s linear infinite;
+}
+
+@keyframes glowingBorder {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.rec-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 35px rgba(0, 224, 255, 0.6);
+}
+
+/* ==== HEADINGS ==== */
 .rec-card h2 {
-  margin-top: 0;
   font-size: 2rem;
   text-align: center;
-  font-weight: 700;
-  text-shadow: 0 3px 12px rgba(0,0,0,0.7);
+  margin-bottom: 1rem;
+  color: #00e0ff;
+  text-shadow: 0 0 5px #00e0ff, 0 0 15px #00e0ff;
 }
 
-/* Muted text for scores or info */
+/* ==== TEXT ==== */
 .muted {
-  color: #ccc;
+  color: #b3b3b3;
   font-size: 0.9rem;
 }
 
-/* Error text */
 .error {
-  color: #ff6b6b;
-  margin: 12px 0;
+  color: #ff4d4d;
+  margin: 10px 0;
 }
 
-/* Recommendation list styling */
+/* ==== LIST ==== */
 .rec-card ul {
   list-style: none;
   padding-left: 0;
 }
 
 .rec-card li {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   line-height: 1.6;
   font-size: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Links inside card */
+.rec-card li:hover {
+  background: rgba(0, 224, 255, 0.1);
+  box-shadow: 0 0 10px rgba(0, 224, 255, 0.4);
+}
+
+/* ==== LINKS ==== */
 .rec-card a {
   color: #1e90ff;
   text-decoration: underline;
 }
 
-/* Separator line */
 .rec-card hr {
   border: 0;
   height: 1px;
@@ -83,35 +126,74 @@ body, html {
   margin: 20px 0;
 }
 
-/* Scrollbar for long content */
+/* ==== SCROLLBAR ==== */
 .rec-card::-webkit-scrollbar {
   width: 8px;
 }
-
 .rec-card::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.2);
+  background: rgba(0, 224, 255, 0.3);
   border-radius: 4px;
 }
-
 .rec-card::-webkit-scrollbar-track {
   background: transparent;
 }
 
-/* Responsive adjustments */
+/* ==== SEARCH BAR ==== */
+.search-bar input {
+  width: 100%;
+  padding: 0.9rem 1.2rem;
+  border-radius: 15px;
+  border: 1px solid rgba(0, 224, 255, 0.5);
+  background: rgba(0,0,0,0.3);
+  color: #fff;
+  font-size: 1rem;
+  box-shadow: 0 0 15px rgba(0, 224, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.search-bar input:focus {
+  outline: none;
+  border-color: #00e0ff;
+  box-shadow: 0 0 25px rgba(0, 224, 255, 0.5);
+}
+
+.search-bar::after {
+  content: "🔍";
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #00e0ff;
+  font-size: 1.2rem;
+}
+
+/* ==== BUTTON ==== */
+button {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 15px;
+  border: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(90deg, #00e0ff, #0078ff);
+  box-shadow: 0 0 20px rgba(0, 224, 255, 0.4);
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 35px rgba(0, 224, 255, 0.7);
+}
+
+/* ==== RESPONSIVE ==== */
 @media (max-width: 768px) {
-  .rec-card {
-      padding: 30px 25px;
-  }
-  .rec-card h2 {
-      font-size: 1.6rem;
-  }
+  .rec-card { padding: 1.5rem; }
+  .rec-card h2 { font-size: 1.6rem; }
 }
 
 @media (max-width: 420px) {
-  .rec-card {
-      padding: 20px 16px;
-  }
-  .rec-card h2 {
-      font-size: 1.4rem;
-  }
+  .rec-card { padding: 1rem; }
+  .rec-card h2 { font-size: 1.4rem; }
 }
