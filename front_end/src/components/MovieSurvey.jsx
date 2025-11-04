@@ -1,6 +1,6 @@
 // src/components/MovieSurvey.jsx
 import { useState, useEffect } from "react";
-import { fetchOmdbData } from "../lib/api";
+import { fetchOmdbData, runCombinedBiases } from "../lib/api";
 import "../style/MovieSurvey.css";
 import { db } from "../firebase";
 import {
@@ -192,7 +192,19 @@ export default function MovieSurvey() {
             }
 
             console.log("✅ Ratings successfully saved.");
-            navigate("/recommend", { state: { fromSurvey: true } });
+
+            // ⬇️ NEW: run the backend pipeline, then navigate with results
+            let explanations = [];
+            try {
+                const resp = await runCombinedBiases(10); // or 100 if you like
+                explanations = resp.explanations || [];
+            } catch (err2) {
+                console.warn("runCombinedBiases failed:", err2);
+            }
+
+            // keep fromSurvey so existing behavior isn't broken, and also pass explanations like before
+            navigate("/recommend", { state: { fromSurvey: true, explanations } });
+
         } catch (err) {
             console.error("❌ Firestore submission failed:", err);
             alert("Submit failed. Please try again.");
