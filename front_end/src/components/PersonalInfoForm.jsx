@@ -1,6 +1,7 @@
 // src/components/PersonalInfoForm.jsx
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
+import { useState } from "react";
 
 export default function PersonalInfoForm({ user, onNext, error, setError }) {
   const [gender, setGender] = useState("");

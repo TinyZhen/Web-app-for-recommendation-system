@@ -1,6 +1,7 @@
 // src/components/MovieSurvey.jsx
 import { useState, useEffect } from "react";
 import { fetchOmdbData, runCombinedBiases } from "../lib/api";
+import { fine_tune_recommend } from "../lib/api";
 import "../style/MovieSurvey.css";
 import { db } from "../firebase";
 import {
@@ -196,10 +197,13 @@ export default function MovieSurvey() {
             // ⬇️ NEW: run the backend pipeline, then navigate with results
             let explanations = [];
             try {
-                const resp = await runCombinedBiases(10); // or 100 if you like
-                explanations = resp.explanations || [];
+                // const resp = await runCombinedBiases(10); // or 100 if you like
+                // explanations = resp.explanations || [];
+                const resp = await fine_tune_recommend();
+                explanations = resp.recommendations || [];
             } catch (err2) {
-                console.warn("runCombinedBiases failed:", err2);
+                // console.warn("runCombinedBiases failed:", err2);
+                console.warn("fine_tune_recommend failed:", err2);
             }
 
             // keep fromSurvey so existing behavior isn't broken, and also pass explanations like before

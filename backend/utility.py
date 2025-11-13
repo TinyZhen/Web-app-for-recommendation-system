@@ -20,18 +20,73 @@ def get_M_i(item_id,movies):
         "item_id": row["MovieID"],
         "title": row["Title"],
         "category": row["Genres"].split("|")[0],  # or full genres
-        "popularity": row["popularity"]
+        "popularity": row.get("popularity",0.0) #Just for safety
     }
 
-def get_X_u(user_id,users):
-    row = users[users.UserID == user_id].iloc[0]
+# def get_X_u(user_id,users):
+#     # row = users[users.UserID == user_id].iloc[0]
+#     subset = users[users.UserID == user_id]
+
+#     # ✅ FIX: if numeric user_id (hash) doesn't exist in users.dat, fallback
+#     if subset.empty:
+#         return {
+#             "user_id": user_id,
+#             "gender": "Unknown",
+#             "age": 0,
+#             "occupation": "Unknown",
+#             "zip": "00000"
+#         }
+
+#     row = subset.iloc[0]
+#     return {
+#         "user_id": row["UserID"],
+#         "gender": row["Gender"],
+#         "age": row["Age"],
+#         "occupation": row["Occupation"],
+#         "zip": row["Zip-code"]
+#     }
+
+def get_X_u(user_id, users, user_profile=None):
+    """
+    Returns user context for explanation.
+    If user_profile (Firestore) is provided, prefer it over users.dat.
+    """
+
+    # 🔥 If Firestore user profile exists, use it
+    if user_profile is not None:
+        return {
+            "name": user_profile.get("displayName", "User"),
+            "user_id": user_id,
+            "gender": user_profile.get("gender", "Unknown"),
+            "age": user_profile.get("age", 0),
+            "occupation": user_profile.get("occupation", "Unknown"),
+            "zip": user_profile.get("zipcode", "00000")
+        }
+
+    # Otherwise, use MovieLens (ML-1M) users.dat
+    subset = users[users.UserID == user_id]
+
+    # If numeric hashed user not found → fallback
+    if subset.empty:
+        return {
+            "name": "User",
+            "user_id": user_id,
+            "gender": "Unknown",
+            "age": 0,
+            "occupation": "Unknown",
+            "zip": "00000"
+        }
+
+    row = subset.iloc[0]
     return {
+        "name": f"User #{row['UserID']}",
         "user_id": row["UserID"],
         "gender": row["Gender"],
         "age": row["Age"],
         "occupation": row["Occupation"],
         "zip": row["Zip-code"]
     }
+
 def build_explanation_prompt(E_ui, X_u, M_i, theta_u):
     """
     Builds a user-friendly prompt for LLM-based recommendation explanations.
@@ -63,7 +118,9 @@ def build_explanation_prompt(E_ui, X_u, M_i, theta_u):
     top_biases_str = ", ".join([BIAS_LABELS.get(k, k.replace("_", " ")) for k, _ in top_biases])
 
     # User and item context
-    user_context = f"User #{X_u['user_id']}"
+    # user_context = f"User #{X_u['user_id']}"
+    user_context = X_u.get("name", "the user")
+
     title = M_i.get('title') or f"Item #{M_i['item_id']}"
     item_context = f"{title} in the '{M_i['category']}' category"
 
