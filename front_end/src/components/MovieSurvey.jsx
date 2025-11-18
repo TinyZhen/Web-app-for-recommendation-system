@@ -4,7 +4,8 @@ import "../style/MovieSurvey.css";
 import MovieCard from "./MovieCard";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
-
+import { db } from "../firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 export default function MovieSurvey() {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -125,6 +126,15 @@ export default function MovieSurvey() {
         if (!ratedMovies.length) {
             alert("Please rate at least one movie!");
             return;
+        }
+
+        for (const r of ratedMovies) {
+            await addDoc(collection(db, "ratings"), {
+                userId: user.uid,
+                movieId: r.movieId,
+                rating: r.rating,
+                createdAt: serverTimestamp()
+            });
         }
 
         let explanations = [];
