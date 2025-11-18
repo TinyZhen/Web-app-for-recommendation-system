@@ -83,15 +83,24 @@ export default function Profile() {
                     />
                 </label>
 
-                <label>
-                    Age:
-                    <input
-                        type="number"
-                        name="age"
-                        value={profile.age}
-                        onChange={handleChange}
-                    />
-                </label>
+<label>
+    Age:
+    <select
+        name="age"
+        value={profile.age}
+        onChange={handleChange}
+    >
+        <option value="">Select Age Range</option>
+        <option value="1">Under 18</option>
+        <option value="18">18–24</option>
+        <option value="25">25–34</option>
+        <option value="35">35–44</option>
+        <option value="45">45–49</option>
+        <option value="50">50–55</option>
+        <option value="56">56+</option>
+    </select>
+</label>
+
 
                 <label>
                     Gender:
@@ -107,15 +116,38 @@ export default function Profile() {
                     </select>
                 </label>
 
-                <label>
-                    Occupation:
-                    <input
-                        type="text"
-                        name="occupation"
-                        value={profile.occupation}
-                        onChange={handleChange}
-                    />
-                </label>
+<label>
+    Occupation:
+    <select
+        name="occupation"
+        value={profile.occupation}
+        onChange={handleChange}
+    >
+        <option value="">Select Occupation</option>
+        <option value="0">Other / Not specified</option>
+        <option value="1">Academic / Educator</option>
+        <option value="2">Artist</option>
+        <option value="3">Clerical / Admin</option>
+        <option value="4">College / Grad Student</option>
+        <option value="5">Customer Service</option>
+        <option value="6">Doctor / Health Care</option>
+        <option value="7">Executive / Managerial</option>
+        <option value="8">Farmer</option>
+        <option value="9">Homemaker</option>
+        <option value="10">K-12 Student</option>
+        <option value="11">Lawyer</option>
+        <option value="12">Programmer</option>
+        <option value="13">Retired</option>
+        <option value="14">Sales / Marketing</option>
+        <option value="15">Scientist</option>
+        <option value="16">Self-Employed</option>
+        <option value="17">Technician / Engineer</option>
+        <option value="18">Tradesman / Craftsman</option>
+        <option value="19">Unemployed</option>
+        <option value="20">Writer</option>
+    </select>
+</label>
+
 
                 <label>
                     Zipcode:
