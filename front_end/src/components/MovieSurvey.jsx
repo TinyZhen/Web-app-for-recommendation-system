@@ -27,7 +27,7 @@ export default function MovieSurvey() {
     // -------------------- Load Local Movies --------------------
     useEffect(() => {
         async function load() {
-            const res = await fetch("/movies.json");
+            const res = await fetch("/data/movies.json");
             const data = await res.json();
             setAllMovies(data);
             setLoading(false);
