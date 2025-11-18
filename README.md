@@ -1,20 +1,26 @@
-Web-app-for-recommendation-system
+# Web-app-for-recommendation-system
 
-This repository contains a full-stack recommendation system web application with a React + Vite + Firebase frontend and a FastAPI + Groq backend.
+This repository contains a full-stack recommendation system web application with a **React + Vite + Firebase frontend** and a **FastAPI + Groq backend**.
 
-🚀 Setup Instructions
+---
+
+## 🚀 Setup Instructions
 
 Follow these steps after pulling the repository.
 
-1. Create .env file in the frontend (Vite)
+---
 
-Path:
+## 1. Create `.env` file in the frontend (Vite)
 
+**Path:**
+
+```
 front_end/.env
+```
 
+**Content (replace with your own keys):**
 
-Content (replace with your own keys):
-
+```env
 VITE_API_KEY=your_firebase_api_key
 VITE_AUTH_DOMAIN=your_auth_domain
 VITE_PROJECT_ID=your_project_id
@@ -23,16 +29,21 @@ VITE_MESSAGING_SENDER_ID=your_sender_id
 VITE_APP_ID=your_app_id
 VITE_MEASUREMENT_ID=your_measurement_id
 VITE_OMDB_API_KEY=your_omdb_api_key
+```
 
-2. Create firebase.js in front_end/src/
+---
 
-Path:
+## 2. Create `firebase.js` in `front_end/src/`
 
+**Path:**
+
+```
 front_end/src/firebase.js
+```
 
+**Content:**
 
-Content:
-
+```javascript
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
@@ -50,88 +61,110 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+```
 
-3. Create serviceAccountKey.json in backend
+---
 
-Path:
+## 3. Create `serviceAccountKey.json` in backend
 
+**Path:**
+
+```
 backend/serviceAccountKey.json
+```
 
+**Steps:**
 
-Steps:
+- Firebase Console → Project Settings  
+- Go to **Service Accounts**  
+- Select **Node.js**  
+- Click **Generate new private key**  
+- Rename the file to `serviceAccountKey.json`  
+- Place it inside the backend folder  
 
-Firebase Console → Project Settings
+---
 
-Go to Service Accounts
+## 4. Create backend `.env` file
 
-Select Node.js
+**Path:**
 
-Click Generate new private key
-
-Rename the file to serviceAccountKey.json
-
-Place it inside the backend folder
-
-4. Create backend .env file
-
-Path:
-
+```
 backend/.env
+```
 
+**Content:**
 
-Content:
-
+```env
 GOOGLE_APPLICATION_CREDENTIALS=serviceAccountKey.json
 ALLOWED_ORIGINS=http://localhost:5173
 PORT=8000
 GROQ_API_KEY=your_groq_api_key_here
 OMDB_API_KEY=your_omdb_api_key_here
+```
 
-5. Get OMDb API Key
+---
+
+## 5. Get OMDb API Key
 
 Used to fetch movie data.
 
-Steps:
+### Steps:
 
-Visit: https://www.omdbapi.com/apikey.aspx
+1. Visit: https://www.omdbapi.com/apikey.aspx  
+2. Select **FREE plan**  
+3. Enter your email  
+4. Confirm the activation email  
+5. Copy your API key  
+6. Put it into:
+   - `front_end/.env` → `VITE_OMDB_API_KEY`
+   - `backend/.env` → `OMDB_API_KEY`
 
-Select FREE plan
+---
 
-Enter your email
+## 6. Install dependencies
 
-Confirm the activation email
+### Frontend:
 
-Copy your API key
-
-Put it into:
-
-front_end/.env → VITE_OMDB_API_KEY
-
-backend/.env → OMDB_API_KEY
-
-6. Install dependencies
-Frontend:
+```bash
 cd front_end
 npm install
+```
 
-Backend:
+### Backend:
+
+```bash
 cd backend
 pip install -r requirements.txt
+```
 
-7. Run frontend
+---
+
+## 7. Run frontend
+
+```bash
 cd front_end
 npm run dev
-
+```
 
 Runs at:
 
+```
 http://localhost:5173
+```
 
-8. Run backend
+---
+
+## 8. Run backend
+
+```bash
 cd backend
 uvicorn main:app --reload --port 8000
-
+```
 
 Backend runs at:
 
+```
 http://localhost:8000
+```
+
+---
