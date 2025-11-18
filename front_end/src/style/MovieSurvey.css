@@ -209,3 +209,33 @@
 .rating-select option {
     color: #000;
 }
+
+.scroll-plot {
+    max-height: 120px;
+    overflow-y: auto;
+    padding-right: 6px;
+    line-height: 1.45;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+
+    scrollbar-width: thin;
+    scrollbar-color: #555 #1f2937;
+}
+
+.scroll-plot::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scroll-plot::-webkit-scrollbar-track {
+    background: #1f2937;
+    border-radius: 10px;
+}
+
+.scroll-plot::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 10px;
+}
+
+.scroll-plot::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}

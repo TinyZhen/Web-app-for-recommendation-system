@@ -27,7 +27,7 @@ export default function MovieCard({ movie, info, expanded, loading, rating, onTo
                             <p className="loading-text">Loading details…</p>
                         ) : (
                             <>
-                                <p className="movie-plot">{info?.plot || "No description available."}</p>
+                                <p className="movie-plot scroll-plot">{info?.plot || "No description available."}</p>
                                 {info?.director && (
                                     <p>
                                         <strong>Director:</strong> {info.director}

@@ -52,6 +52,28 @@ export default function MovieSurvey() {
     }, [search, genre, year, ratingFilter]);
 
     // -------------------- Fetch & Filter --------------------
+    async function fetchMovieDetails(title) {
+        try {
+            const res = await fetch(
+                `https://www.omdbapi.com/?apikey=你的KEY&t=${encodeURIComponent(title)}&plot=full`
+            );
+            const data = await res.json();
+
+            return {
+                plot: data.Plot !== "N/A" ? data.Plot : "",
+                year: data.Year,
+                director: data.Director,
+                actors: data.Actors
+            };
+        } catch (e) {
+            console.error("fetchMovieDetails failed:", e);
+            return null;
+        }
+    }
+
+
+
+
     async function loadMovies(reset = false) {
         if (loading) return;
         if (!hasMore && !reset) return;
@@ -137,8 +159,19 @@ export default function MovieSurvey() {
     }
 
     // -------------------- UI Handlers --------------------
-    const toggleExpand = (m) =>
+    const toggleExpand = async (m) => {
         setExpanded((prev) => ({ ...prev, [m.id]: !prev[m.id] }));
+        if (!details[m.id]) {
+            // console.log("Fetching OMDB details for:", m.title);
+            const info = await fetchOmdbData(m.title);
+
+            // console.log("OMDB returned:", info);
+
+            if (info) {
+                setDetails((prev) => ({ ...prev, [m.id]: info }));
+            }
+        }
+    };
 
     const onRate = (id, val) =>
         setRatings((r) => ({ ...r, [id]: val }));

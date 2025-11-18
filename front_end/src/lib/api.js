@@ -155,7 +155,7 @@ export async function fetchOmdbData(title) {
   const match = cleanTitle.match(/(.+),\s*(The|A|An)$/i);
   if (match) cleanTitle = `${match[2]} ${match[1]}`;
 
-  const url = `https://www.omdbapi.com/?apikey=${OMDB_API_KEY}&t=${encodeURIComponent(cleanTitle)}`;
+  const url = `https://www.omdbapi.com/?apikey=${OMDB_API_KEY}&t=${encodeURIComponent(cleanTitle)}&plot=full`;
 
   try {
     const res = await fetch(url);
