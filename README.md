@@ -1,39 +1,137 @@
-# Web-app-for-recommendation-system
+Web-app-for-recommendation-system
 
-When you pull the repository for changes <br>
+This repository contains a full-stack recommendation system web application with a React + Vite + Firebase frontend and a FastAPI + Groq backend.
 
-1. Create firebase.js in src folder in front_end folder i.e., /src/firebase.js file  <br>
+🚀 Setup Instructions
 
-firebase.js file content:  <br>
-import { initializeApp } from 'firebase/app';  <br>
-import { getAuth } from 'firebase/auth';  <br>
-import { getFirestore } from 'firebase/firestore'; <br>
+Follow these steps after pulling the repository.
 
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional <br>
-const firebaseConfig = { <br>
-    //Add your firebaseConfig <br>
-  }; <br>
+1. Create .env file in the frontend (Vite)
 
-  export const app = initializeApp(firebaseConfig); <br>
-export const auth = getAuth(app); <br>
-export const db = getFirestore(app); <br>
+Path:
 
-To get your firebaseConfig go to recommender-system project and click on project settings of cs682 webapp and then scroll down and choose config then you will get copy paste code of firebaseConfig. <br>
+front_end/.env
 
-2. Create serviceAccountKey.json in backend folder i.e., /backend/serviceAccountKey.json <br>
-<br>
-serviceAccountKey.json content: <br>
-<br>
- To get the content go to recommender-system project and click on project settings of cs682 webapp and then click on Service Accounts and then click generate new private key by choosing Node.js under Admin SDK Configuration snippet and then click generate private key in pop up window and cand rename the downloaded file to serviceAccountKey.json and place it in backend folder  <br>
-<br>
-3. Create .env file in backend folder and paste the below code in it <br>
-<br>
-GOOGLE_APPLICATION_CREDENTIALS=serviceAccountKey.json <br>
-ALLOWED_ORIGINS=http://localhost:5173 <br>
-PORT=8000 <br><br>
-4. Copy Groq API Key by generating a api key for you in GroqCloud and past it in GROQ_API_KEY in .env of backend<br><br>
-5. Do npm install in front_end and fast_api in backend folders <br><br>
-6. In front_end folder execute the following command: <br>
-   npm run dev <br><br>
-7. In backend folder execute the following command: <br>
- uvicorn main:app --reload --port 8000  <br>
+
+Content (replace with your own keys):
+
+VITE_API_KEY=your_firebase_api_key
+VITE_AUTH_DOMAIN=your_auth_domain
+VITE_PROJECT_ID=your_project_id
+VITE_STORAGE_BUCKET=your_storage_bucket
+VITE_MESSAGING_SENDER_ID=your_sender_id
+VITE_APP_ID=your_app_id
+VITE_MEASUREMENT_ID=your_measurement_id
+VITE_OMDB_API_KEY=your_omdb_api_key
+
+2. Create firebase.js in front_end/src/
+
+Path:
+
+front_end/src/firebase.js
+
+
+Content:
+
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_API_KEY,
+  authDomain: import.meta.env.VITE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_APP_ID,
+  measurementId: import.meta.env.VITE_MEASUREMENT_ID,
+};
+
+export const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+
+3. Create serviceAccountKey.json in backend
+
+Path:
+
+backend/serviceAccountKey.json
+
+
+Steps:
+
+Firebase Console → Project Settings
+
+Go to Service Accounts
+
+Select Node.js
+
+Click Generate new private key
+
+Rename the file to serviceAccountKey.json
+
+Place it inside the backend folder
+
+4. Create backend .env file
+
+Path:
+
+backend/.env
+
+
+Content:
+
+GOOGLE_APPLICATION_CREDENTIALS=serviceAccountKey.json
+ALLOWED_ORIGINS=http://localhost:5173
+PORT=8000
+GROQ_API_KEY=your_groq_api_key_here
+OMDB_API_KEY=your_omdb_api_key_here
+
+5. Get OMDb API Key
+
+Used to fetch movie data.
+
+Steps:
+
+Visit: https://www.omdbapi.com/apikey.aspx
+
+Select FREE plan
+
+Enter your email
+
+Confirm the activation email
+
+Copy your API key
+
+Put it into:
+
+front_end/.env → VITE_OMDB_API_KEY
+
+backend/.env → OMDB_API_KEY
+
+6. Install dependencies
+Frontend:
+cd front_end
+npm install
+
+Backend:
+cd backend
+pip install -r requirements.txt
+
+7. Run frontend
+cd front_end
+npm run dev
+
+
+Runs at:
+
+http://localhost:5173
+
+8. Run backend
+cd backend
+uvicorn main:app --reload --port 8000
+
+
+Backend runs at:
+
+http://localhost:8000
