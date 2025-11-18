@@ -71,92 +71,173 @@ export default function MovieSurvey() {
         }
     }
 
+    // -------------------- Load Movies from movies.dat --------------------
+async function loadMovies(reset = false) {
+    if (loading) return;
+    if (!hasMore && !reset) return;
 
+    setLoading(true);
+    setError("");
 
+    try {
+        // Load full file once per refresh
+        const resp = await fetch("/data/movies.dat");   // ← your local file in public/data/
+        const text = await resp.text();
 
-    async function loadMovies(reset = false) {
-        if (loading) return;
-        if (!hasMore && !reset) return;
-
-        setLoading(true);
-        setError("");
-
-        try {
-            // Base query sorted by title
-            let q = query(collection(db, "movies"), orderBy("title"), limit(pageSize));
-
-            // Continue from the last document if not reset
-            if (lastDoc && !reset) {
-                q = query(
-                    collection(db, "movies"),
-                    orderBy("title"),
-                    startAfter(lastDoc),
-                    limit(pageSize)
-                );
-            }
-
-            const snap = await getDocs(q);
-            if (snap.empty) {
-                setHasMore(false);
-                setLoading(false);
-                return;
-            }
-
-            const newDocs = snap.docs.map((d) => ({
-                id: d.id,
-                ...d.data(),
-            }));
-
-            // Apply frontend filters
-            const filtered = newDocs.filter((m) => {
-                const title = m.title?.toLowerCase() || "";
-                const matchSearch = !search || title.includes(search.toLowerCase());
-                const matchGenre =
-                    genre === "All" ||
-                    (Array.isArray(m.genres) && m.genres.includes(genre)) ||
-                    (typeof m.genres === "string" && m.genres.includes(genre));
-
-                const yearVal =
-                    m.year ||
-                    (m.title?.match(/\((\d{4})\)/)
-                        ? parseInt(m.title.match(/\((\d{4})\)/)[1])
-                        : 0);
-                const matchYear =
-                    year === "All" ||
-                    (year === "before2000" && yearVal < 2000) ||
-                    (year === "2000to2010" && yearVal >= 2000 && yearVal <= 2010) ||
-                    (year === "after2010" && yearVal > 2010);
-
-                const imdb = Number(m.imdbRating || m.rating || 0);
-                const matchRating =
-                    ratingFilter === "All" ||
-                    (ratingFilter === "gt8" && imdb > 8) ||
-                    (ratingFilter === "gt7" && imdb > 7) ||
-                    (ratingFilter === "lt6" && imdb < 6);
-
-                return matchSearch && matchGenre && matchYear && matchRating;
+        // Parse MovieLens format
+        const allMovies = text
+            .split("\n")
+            .filter((line) => line.trim().length > 0)
+            .map((line) => {
+                const [id, title, genres] = line.split("::");
+                return {
+                    id,
+                    title,
+                    genres: genres?.split("|") || [],
+                    year: (() => {
+                        const match = title.match(/\((\d{4})\)/);
+                        return match ? parseInt(match[1]) : null;
+                    })(),
+                };
             });
 
-            // Enrich with OMDb poster data if missing
-            const enriched = await Promise.all(
-                filtered.map(async (m) => {
-                    if (m.poster) return m;
-                    const info = await fetchOmdbData(m.title);
-                    return info?.poster ? { ...m, poster: info.poster } : m;
-                })
-            );
+        // ------------------------------------------------
+        // Frontend filters (same as Firestore version)
+        // ------------------------------------------------
+        const filtered = allMovies.filter((m) => {
+            const t = m.title.toLowerCase();
+            const matchSearch = !search || t.includes(search.toLowerCase());
 
-            // Update state
-            setMovies((prev) => (reset ? enriched : [...prev, ...enriched]));
-            setLastDoc(snap.docs[snap.docs.length - 1]);
-            setHasMore(snap.docs.length === pageSize);
-        } catch (e) {
-            console.error(e);
-            setError("Failed to load movies.");
-        } finally {
-            setLoading(false);
-        }
+            const matchGenre =
+                genre === "All" || (Array.isArray(m.genres) && m.genres.includes(genre));
+
+            const matchYear =
+                year === "All" ||
+                (year === "before2000" && m.year < 2000) ||
+                (year === "2000to2010" && m.year >= 2000 && m.year <= 2010) ||
+                (year === "after2010" && m.year > 2010);
+
+            // Note: MovieLens has no imdbRating → treat as 0
+            const imdb = 0;
+            const matchRating =
+                ratingFilter === "All" ||
+                (ratingFilter === "gt8" && imdb > 8) ||
+                (ratingFilter === "gt7" && imdb > 7) ||
+                (ratingFilter === "lt6" && imdb < 6);
+
+            return matchSearch && matchGenre && matchYear && matchRating;
+        });
+
+        // ------------------------------------------------
+        // Pagination: slice manually instead of Firestore
+        // ------------------------------------------------
+        const startIndex = reset ? 0 : movies.length;
+        const page = filtered.slice(startIndex, startIndex + pageSize);
+
+        if (page.length < pageSize) setHasMore(false);
+
+        // ----------------------------------------
+        // Enrich with OMDb posters if missing
+        // ----------------------------------------
+        const enriched = await Promise.all(
+            page.map(async (m) => {
+                const info = await fetchOmdbData(m.title);
+                return info?.poster ? { ...m, poster: info.poster } : m;
+            })
+        );
+
+        setMovies((prev) => (reset ? enriched : [...prev, ...enriched]));
+    } catch (err) {
+        console.error(err);
+        setError("Failed to load movies from movies.dat");
+    } finally {
+        setLoading(false);
     }
+}
+
+    // async function loadMovies(reset = false) {
+    //     if (loading) return;
+    //     if (!hasMore && !reset) return;
+
+    //     setLoading(true);
+    //     setError("");
+
+    //     try {
+    //         // Base query sorted by title
+    //         let q = query(collection(db, "movies"), orderBy("title"), limit(pageSize));
+
+    //         // Continue from the last document if not reset
+    //         if (lastDoc && !reset) {
+    //             q = query(
+    //                 collection(db, "movies"),
+    //                 orderBy("title"),
+    //                 startAfter(lastDoc),
+    //                 limit(pageSize)
+    //             );
+    //         }
+
+    //         const snap = await getDocs(q);
+    //         if (snap.empty) {
+    //             setHasMore(false);
+    //             setLoading(false);
+    //             return;
+    //         }
+
+    //         const newDocs = snap.docs.map((d) => ({
+    //             id: d.id,
+    //             ...d.data(),
+    //         }));
+
+    //         // Apply frontend filters
+    //         const filtered = newDocs.filter((m) => {
+    //             const title = m.title?.toLowerCase() || "";
+    //             const matchSearch = !search || title.includes(search.toLowerCase());
+    //             const matchGenre =
+    //                 genre === "All" ||
+    //                 (Array.isArray(m.genres) && m.genres.includes(genre)) ||
+    //                 (typeof m.genres === "string" && m.genres.includes(genre));
+
+    //             const yearVal =
+    //                 m.year ||
+    //                 (m.title?.match(/\((\d{4})\)/)
+    //                     ? parseInt(m.title.match(/\((\d{4})\)/)[1])
+    //                     : 0);
+    //             const matchYear =
+    //                 year === "All" ||
+    //                 (year === "before2000" && yearVal < 2000) ||
+    //                 (year === "2000to2010" && yearVal >= 2000 && yearVal <= 2010) ||
+    //                 (year === "after2010" && yearVal > 2010);
+
+    //             const imdb = Number(m.imdbRating || m.rating || 0);
+    //             const matchRating =
+    //                 ratingFilter === "All" ||
+    //                 (ratingFilter === "gt8" && imdb > 8) ||
+    //                 (ratingFilter === "gt7" && imdb > 7) ||
+    //                 (ratingFilter === "lt6" && imdb < 6);
+
+    //             return matchSearch && matchGenre && matchYear && matchRating;
+    //         });
+
+    //         // Enrich with OMDb poster data if missing
+    //         const enriched = await Promise.all(
+    //             filtered.map(async (m) => {
+    //                 if (m.poster) return m;
+    //                 const info = await fetchOmdbData(m.title);
+    //                 return info?.poster ? { ...m, poster: info.poster } : m;
+    //             })
+    //         );
+
+    //         // Update state
+    //         setMovies((prev) => (reset ? enriched : [...prev, ...enriched]));
+    //         setLastDoc(snap.docs[snap.docs.length - 1]);
+    //         setHasMore(snap.docs.length === pageSize);
+    //     } catch (e) {
+    //         console.error(e);
+    //         setError("Failed to load movies.");
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // }
 
     // -------------------- UI Handlers --------------------
     const toggleExpand = async (m) => {
