@@ -9,7 +9,10 @@ export default function MovieCard({ movie, info, expanded, loading, rating, onTo
             onClick={onToggle}
         >
             <div className="poster-frame">
-                <img src={movie.poster || fallbackPoster} alt={movie.title} />
+                <img
+                    src={info?.poster || movie.poster || fallbackPoster}
+                    alt={movie.title}
+                />
             </div>
 
             <div className="movie-body">

@@ -84,3 +84,5 @@ coverage.xml
 .env.*
 
 .DS_Store
+
+convert.py
