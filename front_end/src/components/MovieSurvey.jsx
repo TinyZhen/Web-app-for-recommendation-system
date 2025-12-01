@@ -25,6 +25,8 @@ export default function MovieSurvey() {
     const pageSize = 30;
     const [page, setPage] = useState(1);
 
+    const [submitting, setSubmitting] = useState(false);
+
     // -------------------- Load Local Movies --------------------
     useEffect(() => {
         async function load() {
@@ -128,23 +130,46 @@ export default function MovieSurvey() {
             return;
         }
 
-        for (const r of ratedMovies) {
-            await addDoc(collection(db, "ratings"), {
-                userId: user.uid,
-                movieId: r.movieId,
-                rating: r.rating,
-                createdAt: serverTimestamp()
-            });
-        }
+        setSubmitting(true);
 
-        let explanations = [];
         try {
-            const resp = await fine_tune_recommend();
-            explanations = resp.recommendations || [];
-        } catch { }
+            // ✅ Save ratings first
+            for (const r of ratedMovies) {
+                await addDoc(collection(db, "ratings"), {
+                    userId: user.uid,
+                    movieId: r.movieId,
+                    rating: r.rating,
+                    createdAt: serverTimestamp()
+                });
+            }
 
-        navigate("/recommend", { state: { fromSurvey: true, explanations } });
+            // ✅ WAIT for AI API to finish
+            const resp = await fine_tune_recommend();
+            const explanations = resp?.recommendations || [];
+
+            // ✅ Navigate ONLY AFTER response is ready
+            navigate("/recommend", { 
+                state: { fromSurvey: true, explanations } 
+            });
+
+        } catch (err) {
+            console.error(err);
+            alert("Failed to generate recommendations.");
+        } finally {
+            setSubmitting(false);
+        }
     }
+
+    if (submitting) {
+        return (
+            <section className="survey-shell loading-screen">
+                <h2>🧠 Generating Your Personalized Recommendations...</h2>
+                <p>Please wait while our AI analyzes your preferences.</p>
+                <div className="spinner"></div>
+            </section>
+        );
+    }
+    
 
     // -------------------- Render --------------------
     return (
@@ -214,9 +239,14 @@ export default function MovieSurvey() {
                 </div>
             )}
 
+            {/* ✅ ✅ ✅ SUBMIT BUTTON DISABLED DURING LOADING */}
             <div className="floating-submit">
-                <button className="submit-btn" onClick={handleSubmit}>
-                    Submit Ratings
+                <button 
+                    className="submit-btn" 
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                >
+                    {submitting ? "Processing..." : "Submit Ratings"}
                 </button>
             </div>
         </section>
