@@ -133,7 +133,7 @@ def fine_tune_user(
 
 def recommend_and_explain(
     model, jbf_module, user_encoder, item_encoder, base_bias_df,
-    new_user_id, user_profile, users, movies, ratings, client, top_k=5
+    new_user_id, user_profile, users, movies, ratings, client, theta_u, top_k=5
 ):
 
     num_items = len(item_encoder.classes_)
@@ -153,7 +153,7 @@ def recommend_and_explain(
     recommended_items = item_encoder.inverse_transform(top_idx)
 
     results = []
-    theta_u = float(np.random.rand())
+    # theta_u = float(np.random.rand())
 
     for mid in recommended_items:
         row = bias_df.loc[mid].to_dict()

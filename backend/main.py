@@ -193,6 +193,8 @@ async def fine_tune_recommend(
 
         user_data = user_doc.to_dict()
 
+        theta_u = float(user_data.get("theta_u", 0.5)) 
+
         # ✅✅✅ CHANGED: Ratings now come from frontend — NO Firestore READ
         ratings_list = payload.get("ratings")
         if not ratings_list:
@@ -231,7 +233,7 @@ async def fine_tune_recommend(
 
         results = recommend_and_explain(
             model, jbf_module, user_enc, item_enc, bias_df,
-            numeric_id, user_data, users, movies, ratings_all, client
+            numeric_id, user_data, users, movies, ratings_all, client, theta_u=theta_u
         )
 
         # ✅✅✅ CHANGED: NO MORE FIRESTORE WRITES HERE (CRITICAL FIX)
