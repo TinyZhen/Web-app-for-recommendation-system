@@ -134,10 +134,11 @@ export async function runCombinedBiases(limit = 10) {
   });
 }
 
-// ⭐ NEW: Fine-tuning + explanation-only recommendation pipeline
-export async function fine_tune_recommend() {
+// CHANGED: now accepts ratings payload
+export async function fine_tune_recommend(payload) {
   return authFetch('/fine_tune_recommend', {
-    method: 'POST'
+    method: 'POST',
+    body: JSON.stringify(payload) // CHANGED
   });
 }
 

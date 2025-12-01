@@ -5,7 +5,7 @@ import MovieCard from "./MovieCard";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, writeBatch, doc } from "firebase/firestore";
 export default function MovieSurvey() {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -114,8 +114,8 @@ export default function MovieSurvey() {
         setRatings((r) => ({ ...r, [id]: val }));
     };
 
-    // -------------------- Submit Ratings --------------------
     async function handleSubmit() {
+        if (submitting) return; // CHANGED: prevent double-submit
         const ratedMovies = visibleMovies
             .filter((m) => ratings[m.id])
             .map((m) => ({
@@ -124,34 +124,41 @@ export default function MovieSurvey() {
                 rating: ratings[m.id],
                 genres: m.genres,
             }));
-
+    
         if (!ratedMovies.length) {
             alert("Please rate at least one movie!");
             return;
         }
-
+    
         setSubmitting(true);
-
+    
         try {
-            // ✅ Save ratings first
-            for (const r of ratedMovies) {
-                await addDoc(collection(db, "ratings"), {
+            // CHANGED: BATCH WRITE instead of looped addDoc
+            const batch = writeBatch(db);
+    
+            ratedMovies.forEach((r) => {
+                const ref = doc(collection(db, "ratings"));
+                batch.set(ref, {
                     userId: user.uid,
                     movieId: r.movieId,
                     rating: r.rating,
                     createdAt: serverTimestamp()
                 });
-            }
-
-            // ✅ WAIT for AI API to finish
-            const resp = await fine_tune_recommend();
+            });
+    
+            await batch.commit(); // CHANGED: single network operation
+    
+            // CHANGED: send ratings directly to backend (NO Firestore re-read)
+            const resp = await fine_tune_recommend({
+                ratings: ratedMovies   // CHANGED: payload added
+            });
+    
             const explanations = resp?.recommendations || [];
-
-            // ✅ Navigate ONLY AFTER response is ready
+    
             navigate("/recommend", { 
                 state: { fromSurvey: true, explanations } 
             });
-
+    
         } catch (err) {
             console.error(err);
             alert("Failed to generate recommendations.");
