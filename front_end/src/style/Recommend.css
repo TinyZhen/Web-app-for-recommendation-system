@@ -1,199 +1,198 @@
-/* ==== GLOBAL STYLES ==== */
-body {
-  margin: 0;
-  padding: 0;
-  font-family: 'Poppins', sans-serif;
-  background: linear-gradient(135deg, #0a0a0a, #1c1c2e);
-  color: #fff;
-  min-height: 100vh;
-  overflow-x: hidden;
+.recommend-shell {
+  padding: 20px;
 }
 
-/* ==== HEADER ==== */
-.header {
-  text-align: center;
-  padding: 2rem 1rem;
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: #00e0ff;
-  letter-spacing: 2px;
-  text-shadow: 0 0 10px #00e0ff, 0 0 20px #00e0ff;
-  animation: glowText 3s infinite alternate;
+.recommend-title {
+  font-size: 24px;
+  margin-bottom: 20px;
 }
 
-@keyframes glowText {
-  from { text-shadow: 0 0 10px #00e0ff; }
-  to { text-shadow: 0 0 20px #00e0ff, 0 0 40px #00e0ff; }
+.recommend-card-wrapper {
+  margin-bottom: 20px;
 }
 
-/* ==== CONTAINER ==== */
-.container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 2rem 1rem;
-  gap: 2rem;
+.recommend-explanation {
+  background: #fafafa;
+  border-radius: 10px;
+  padding: 15px;
+  margin-top: 10px;
+  border-left: 4px solid #6c5ce7;
 }
 
-/* ==== GLOWING RECOMMENDATION PANELS ==== */
-.rec-card {
-  position: relative;
-  width: 100%;
-  max-width: 800px;
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 20px;
-  padding: 2rem;
-  backdrop-filter: blur(10px);
-  color: #fff;
-  overflow: hidden;
-  box-shadow: 0 0 20px rgba(0, 224, 255, 0.3);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+.exp-text {
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 10px;
 }
 
-/* Neon animated glow border */
-.rec-card::before {
-  content: '';
-  position: absolute;
-  top: -2px; left: -2px; right: -2px; bottom: -2px;
-  border-radius: 20px;
-  background: linear-gradient(45deg, #00e0ff, #0078ff, #ff00ff, #00e0ff);
-  background-size: 400% 400%;
-  z-index: -1;
-  animation: glowingBorder 6s linear infinite;
+.save-btn {
+  padding: 8px 12px;
+  background: #ff7675;
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
-@keyframes glowingBorder {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+.rec-explanation-scroll {
+  max-height: 150px;
+  /* Limit height */
+  overflow-y: auto;
+  /* Enable vertical scrolling */
+  padding-right: 6px;
+  line-height: 1.45;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 10px;
 }
 
-.rec-card:hover {
-  transform: scale(1.02);
-  box-shadow: 0 0 35px rgba(0, 224, 255, 0.6);
+/* Style scrollbar (optional) */
+.rec-explanation-scroll::-webkit-scrollbar {
+  width: 6px;
 }
 
-/* ==== HEADINGS ==== */
-.rec-card h2 {
-  font-size: 2rem;
-  text-align: center;
-  margin-bottom: 1rem;
-  color: #00e0ff;
-  text-shadow: 0 0 5px #00e0ff, 0 0 15px #00e0ff;
-}
-
-/* ==== TEXT ==== */
-.muted {
-  color: #b3b3b3;
-  font-size: 0.9rem;
-}
-
-.error {
-  color: #ff4d4d;
-  margin: 10px 0;
-}
-
-/* ==== LIST ==== */
-.rec-card ul {
-  list-style: none;
-  padding-left: 0;
-}
-
-.rec-card li {
-  margin-bottom: 14px;
-  line-height: 1.6;
-  font-size: 1rem;
-  padding: 0.5rem 1rem;
-  border-radius: 12px;
-  transition: background 0.3s ease, box-shadow 0.3s ease;
-}
-
-.rec-card li:hover {
-  background: rgba(0, 224, 255, 0.1);
-  box-shadow: 0 0 10px rgba(0, 224, 255, 0.4);
-}
-
-/* ==== LINKS ==== */
-.rec-card a {
-  color: #1e90ff;
-  text-decoration: underline;
-}
-
-.rec-card hr {
-  border: 0;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.2);
-  margin: 20px 0;
-}
-
-/* ==== SCROLLBAR ==== */
-.rec-card::-webkit-scrollbar {
-  width: 8px;
-}
-.rec-card::-webkit-scrollbar-thumb {
-  background: rgba(0, 224, 255, 0.3);
+.rec-explanation-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 4px;
 }
-.rec-card::-webkit-scrollbar-track {
-  background: transparent;
+
+/* Bigger card styles for Recommend page (overrides survey defaults) */
+.survey-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+  gap: 32px;
+  max-width: 1400px;
+  margin: 12px auto;
+  align-items: start;
 }
 
-/* ==== SEARCH BAR ==== */
-.search-bar input {
+.survey-card {
+  padding: 26px;
+  gap: 22px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.4));
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* Ensure card is positioned so saved-pill can be absolute */
+.survey-card {
+  position: relative;
+}
+
+.card-left {
+  flex: 0 0 200px;
+}
+
+.poster-frame {
+  width: 200px;
+  height: 300px;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.poster-img {
   width: 100%;
-  padding: 0.9rem 1.2rem;
-  border-radius: 15px;
-  border: 1px solid rgba(0, 224, 255, 0.5);
-  background: rgba(0,0,0,0.3);
-  color: #fff;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.card-meta {
   font-size: 1rem;
-  box-shadow: 0 0 15px rgba(0, 224, 255, 0.2);
-  transition: all 0.3s ease;
+  color: rgba(255, 255, 255, 0.85);
 }
 
-.search-bar input:focus {
-  outline: none;
-  border-color: #00e0ff;
-  box-shadow: 0 0 25px rgba(0, 224, 255, 0.5);
+.rec-explanation-scroll {
+  max-height: 260px;
+  padding: 14px;
 }
 
-.search-bar::after {
-  content: "🔍";
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #00e0ff;
-  font-size: 1.2rem;
-}
-
-/* ==== BUTTON ==== */
-button {
-  width: 100%;
-  padding: 1rem;
-  border-radius: 15px;
-  border: none;
-  font-weight: 600;
-  font-size: 1.1rem;
-  cursor: pointer;
+.submit-btn,
+.save-btn {
+  padding: 12px 18px;
+  font-size: 1rem;
+  background: #ff7675;
   color: #fff;
-  background: linear-gradient(90deg, #00e0ff, #0078ff);
-  box-shadow: 0 0 20px rgba(0, 224, 255, 0.4);
-  transition: all 0.3s ease;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-block;
 }
 
-button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 35px rgba(0, 224, 255, 0.7);
+/* Responsive: on narrow screens use single column and smaller poster */
+@media (max-width: 720px) {
+  .survey-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    max-width: 95%;
+  }
+
+  .card-left {
+    flex: 0 0 120px;
+  }
+
+  .poster-frame {
+    width: 120px;
+    height: 170px;
+  }
+
+  .card-title {
+    font-size: 1.05rem;
+  }
 }
 
-/* ==== RESPONSIVE ==== */
-@media (max-width: 768px) {
-  .rec-card { padding: 1.5rem; }
-  .rec-card h2 { font-size: 1.6rem; }
+/* Saved button animation and styles */
+.submit-btn {
+  transition: background-color 180ms ease, transform 220ms ease, box-shadow 220ms ease, opacity 180ms ease;
 }
 
-@media (max-width: 420px) {
-  .rec-card { padding: 1rem; }
-  .rec-card h2 { font-size: 1.4rem; }
+.submit-btn:disabled {
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.submit-btn.saved-btn {
+  background-color: #2ecc71;
+  /* green */
+  color: white;
+  box-shadow: 0 10px 30px rgba(46, 204, 113, 0.18);
+  transform-origin: center center;
+  animation: popSave 420ms cubic-bezier(.2, .9, .3, 1);
+}
+
+@keyframes popSave {
+  0% {
+    transform: scale(0.92) translateY(2px);
+    opacity: 0.85;
+  }
+
+  60% {
+    transform: scale(1.06) translateY(-2px);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Optional: subtle saved badge on the card (small pill) */
+.survey-card .saved-pill {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  background: rgba(46, 204, 113, 0.12);
+  color: #2ecc71;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  backdrop-filter: blur(4px);
 }

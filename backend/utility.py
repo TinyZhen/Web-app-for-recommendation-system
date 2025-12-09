@@ -125,30 +125,34 @@ def build_explanation_prompt(E_ui, X_u, M_i, theta_u):
     item_context = f"{title} in the '{M_i['category']}' category"
 
     # Prompt formats by theta_u
+    # NOTE: ask the model to produce a neutral, reason-first explanation WITHOUT
+    # addressing the user directly or using first-person phrases like "I recommend... to <name>".
     if theta_u <= 0.3:
         prompt = f"""
-Explain in one friendly sentence why {item_context} was recommended to {user_context}.
+Provide one friendly sentence explaining the reason for recommending {item_context}.
+Do NOT address the user by name or use first-person phrases such as "I recommend".
 Base the explanation on the most relevant factor: {top_biases_str}.
         """.strip()
 
     elif theta_u <= 0.7:
         prompt = f"""
-You're a helpful recommendation explanation assistant.
+You're a recommendation explanation assistant.
 
-Explain why {item_context} was recommended to {user_context}.
+Provide a concise explanation for recommending {item_context}.
+Do NOT address the user directly or use first-person phrasing (e.g., avoid "I recommend this to...").
 Mention up to two top contributing factors such as: {top_biases_str}.
-Keep the explanation concise, user-friendly, and clear.
+Keep the explanation user-friendly and clear.
         """.strip()
 
     else:
         prompt = f"""
 You are a fairness-aware recommendation explanation assistant.
 
-User Context: {user_context}
 Item Context: {item_context}
 Top contributing fairness-related factors: {top_biases_str}
 
-Please generate a detailed, thoughtful, and transparent explanation for this recommendation.
+Generate a detailed, transparent explanation for recommending this item.
+Do NOT include first-person recommendations or address a specific user (avoid phrases like "I recommend this to <name>").
 Focus on fairness and personalization while remaining easy to understand.
         """.strip()
 
@@ -159,10 +163,17 @@ def generate_llm_explanation(E_ui, X_u, M_i, client, theta_u, temperature=0.7):
     prompt = build_explanation_prompt(E_ui, X_u, M_i, theta_u)
 
     try:
+        # Strong system instruction to avoid first-person recommendation phrasing
+        system_msg = (
+            "You generate neutral, factual recommendation explanations. "
+            "Do NOT use first-person phrasing such as 'I recommend' or address the user by name. "
+            "Provide reasons and contributing factors in concise language."
+        )
+
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": "You are a fairness-aware recommendation explanation assistant."},
+                {"role": "system", "content": system_msg},
                 {"role": "user", "content": prompt}
             ],
             temperature=temperature,

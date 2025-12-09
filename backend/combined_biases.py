@@ -12,6 +12,8 @@ from openai import OpenAI
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from utility import generate_llm_explanation
+
 load_dotenv()
 
 # ---------------------------

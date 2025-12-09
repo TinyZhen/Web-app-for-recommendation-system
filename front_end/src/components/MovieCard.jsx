@@ -46,9 +46,7 @@ export default function MovieCard({ movie, info, expanded, loading, rating, onTo
                     </div>
                 )}
 
-                <div onClick={(e) => e.stopPropagation()}>
-                    <StarRating value={rating || 0} onChange={onRate} />
-                </div>
+                <StarRating value={rating || 0} onChange={onRate} />
             </div>
         </article>
     );

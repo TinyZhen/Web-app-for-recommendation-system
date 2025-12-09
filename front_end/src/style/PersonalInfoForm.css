@@ -1,0 +1,183 @@
+/* PersonalInfoForm.css — Dedicated styles for Step 1 */
+
+/* Root variables (same as Survey.css) */
+:root {
+    --bg: #0b0b0b;
+    --card-bg: #141414;
+    --accent: #e50914;
+    --accent-light: #ff4040;
+    --text: #ffffff;
+    --muted: #b3b3b3;
+    --radius: 14px;
+    --transition: all 0.25s ease;
+}
+
+/* Page container */
+.personal-info-shell {
+    max-width: 720px;
+    margin: 12px auto 48px;
+    padding: 32px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.35));
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.personal-info-shell h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-shadow: 0 0 10px rgba(229, 9, 20, 0.5);
+    margin-bottom: 12px;
+}
+
+.personal-info-shell .form-desc {
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-bottom: 24px;
+}
+
+/* Form layout — vertical, spacious */
+.personal-info-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.personal-info-form .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.personal-info-form label {
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 1.1rem;
+    display: block;
+}
+
+.personal-info-form input[type="text"],
+.personal-info-form input[type="number"],
+.personal-info-form select {
+    background: #0f0f0f;
+    border: 1px solid #222;
+    color: var(--text);
+    padding: 14px 16px;
+    border-radius: 10px;
+    outline: none;
+    transition: var(--transition);
+    font-size: 1rem;
+    min-height: 48px;
+    font-family: "Poppins", sans-serif;
+}
+
+.personal-info-form input:hover,
+.personal-info-form select:hover {
+    border-color: rgba(229, 9, 20, 0.4);
+}
+
+.personal-info-form input:focus,
+.personal-info-form select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 12px rgba(229, 9, 20, 0.2);
+}
+
+/* Custom dropdown styling */
+.personal-info-form select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='%23ffffff' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+    padding-right: 40px;
+}
+
+.personal-info-form select option {
+    background: #0f0f0f;
+    color: #fff;
+    padding: 12px;
+    font-size: 1rem;
+}
+
+.personal-info-form select option:hover,
+.personal-info-form select option:checked {
+    background: var(--accent);
+    color: #fff;
+}
+
+/* Form actions */
+.personal-info-form .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.personal-info-form .submit-btn {
+    background: linear-gradient(90deg, var(--accent), var(--accent-light));
+    border: none;
+    padding: 12px 28px;
+    color: white;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(229, 9, 20, 0.5);
+    transition: var(--transition);
+    min-height: 48px;
+}
+
+.personal-info-form .submit-btn:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 25px rgba(229, 9, 20, 0.7);
+}
+
+.personal-info-form .submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Error message */
+.personal-info-form .error-message {
+    color: #ff6b6b;
+    font-size: 0.95rem;
+    margin-top: 8px;
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+    .personal-info-shell {
+        padding: 24px;
+        margin: 12px 8px 48px;
+    }
+
+    .personal-info-shell h2 {
+        font-size: 1.6rem;
+    }
+
+    .personal-info-form .form-actions {
+        justify-content: stretch;
+    }
+
+    .personal-info-form .submit-btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 420px) {
+    .personal-info-shell {
+        padding: 16px;
+    }
+
+    .personal-info-form label {
+        font-size: 1rem;
+    }
+
+    .personal-info-form input,
+    .personal-info-form select {
+        padding: 12px 14px;
+        min-height: 44px;
+    }
+}

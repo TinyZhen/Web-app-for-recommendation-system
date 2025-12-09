@@ -6,7 +6,10 @@ export default function StarRating({ value = 0, onChange }) {
                 <span
                     key={n}
                     className={`star ${value >= n ? "active" : ""}`}
-                    onClick={() => onChange(n)}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onChange(n);
+                    }}
                 >
                     ★
                 </span>

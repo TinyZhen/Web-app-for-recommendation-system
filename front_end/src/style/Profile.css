@@ -13,9 +13,17 @@
 
 /* Background pulse animation */
 @keyframes bgPulse {
-    0% { background-position: 0 0; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0 100%; }
+    0% {
+        background-position: 0 0;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0 100%;
+    }
 }
 
 .profile-title {
@@ -27,8 +35,13 @@
 }
 
 @keyframes glowTitle {
-    0% { text-shadow: 0 0 8px #1e90ff, 0 0 16px #00bfff; }
-    100% { text-shadow: 0 0 16px #1e90ff, 0 0 32px #00bfff; }
+    0% {
+        text-shadow: 0 0 8px #1e90ff, 0 0 16px #00bfff;
+    }
+
+    100% {
+        text-shadow: 0 0 16px #1e90ff, 0 0 32px #00bfff;
+    }
 }
 
 .profile-sub {
@@ -114,7 +127,9 @@
 }
 
 @keyframes fadeInStatus {
-    to { opacity: 1; }
+    to {
+        opacity: 1;
+    }
 }
 
 /* Responsive */
@@ -123,10 +138,176 @@
         padding: 20px;
         border-radius: 16px;
     }
+
     .profile-title {
         font-size: 1.6rem;
     }
+
     .save-btn {
         padding: 12px;
     }
+}
+
+/* Survey History Section */
+.survey-history-section {
+    width: 100%;
+    max-width: 1000px;
+    margin-top: 50px;
+    padding: 30px;
+    background: rgba(30, 144, 255, 0.08);
+    border: 2px solid rgba(30, 144, 255, 0.3);
+    border-radius: 16px;
+    backdrop-filter: blur(8px);
+}
+
+.history-title {
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+    color: #00bfff;
+    text-align: center;
+    text-shadow: 0 0 8px rgba(0, 191, 255, 0.5);
+}
+
+.history-scroll-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.history-session {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 16px;
+    border-radius: 12px;
+    border-left: 4px solid #1e90ff;
+}
+
+.session-date {
+    font-size: 0.95rem;
+    color: #aaa;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.history-movies-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 8px 0;
+    scroll-behavior: smooth;
+}
+
+.history-movies-scroll::-webkit-scrollbar {
+    height: 6px;
+}
+
+.history-movies-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.history-movies-scroll::-webkit-scrollbar-thumb {
+    background: rgba(30, 144, 255, 0.6);
+    border-radius: 3px;
+}
+
+.history-movies-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(30, 144, 255, 0.9);
+}
+
+.history-movie-card {
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(30, 144, 255, 0.4);
+    border-radius: 10px;
+    padding: 12px 14px;
+    min-width: 180px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.history-movie-card:hover {
+    background: rgba(30, 144, 255, 0.15);
+    border-color: rgba(30, 144, 255, 0.8);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(30, 144, 255, 0.2);
+}
+
+.history-movie-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.history-movie-rating {
+    font-size: 1rem;
+    color: #ffd700;
+}
+
+/* Flyer styles (single horizontal row) */
+.survey-flyer {
+    width: 100%;
+    max-width: 1200px;
+    margin: 40px auto 0;
+    padding: 18px 22px;
+    background: linear-gradient(180deg, rgba(10, 10, 30, 0.35), rgba(0, 0, 0, 0.45));
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.flyer-scroll {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    padding-top: 12px;
+    padding-bottom: 8px;
+}
+
+.flyer-scroll::-webkit-scrollbar {
+    height: 8px;
+}
+
+.flyer-scroll::-webkit-scrollbar-thumb {
+    background: rgba(200, 200, 200, 0.12);
+    border-radius: 6px;
+}
+
+.flyer-card {
+    flex: 0 0 auto;
+    min-width: 220px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    text-align: left;
+}
+
+.flyer-title {
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+}
+
+.flyer-genres {
+    font-size: 0.9rem;
+    color: #bfcbdc;
+    margin-bottom: 8px;
+}
+
+.flyer-rating {
+    color: #ffd700;
+    font-size: 1rem;
+}
+
+.flyer-thumb {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 8px;
 }

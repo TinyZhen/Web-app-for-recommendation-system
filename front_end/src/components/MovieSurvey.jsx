@@ -5,7 +5,7 @@ import MovieCard from "./MovieCard";
 import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
-import { collection, addDoc, serverTimestamp, writeBatch, doc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, writeBatch, doc, getDoc } from "firebase/firestore";
 export default function MovieSurvey() {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -21,8 +21,9 @@ export default function MovieSurvey() {
     const [genre, setGenre] = useState("All");
     const [year, setYear] = useState("All");
     const [genreList, setGenreList] = useState([]);
+    const [yearList, setYearList] = useState([]);
 
-    const pageSize = 30;
+    const pageSize = 28;
     const [page, setPage] = useState(1);
 
     const [submitting, setSubmitting] = useState(false);
@@ -38,13 +39,30 @@ export default function MovieSurvey() {
         load();
     }, []);
 
-    // -------------------- Build Genre List --------------------
+    // -------------------- Build Genre & Year Lists --------------------
     useEffect(() => {
         const setOfGenres = new Set();
-        allMovies.forEach((m) =>
-            m.genres?.forEach((g) => setOfGenres.add(g))
-        );
+        const setOfYears = new Set();
+        allMovies.forEach((m) => {
+            m.genres?.forEach((g) => setOfGenres.add(g));
+            if (m.year) setOfYears.add(parseInt(m.year));
+        });
         setGenreList(["All", ...Array.from(setOfGenres).sort()]);
+
+        // Generate decade-based year ranges
+        if (setOfYears.size > 0) {
+            const yearArray = Array.from(setOfYears).sort((a, b) => a - b);
+            const minYear = yearArray[0];
+            const maxYear = yearArray[yearArray.length - 1];
+            const decades = [];
+
+            for (let decade = Math.floor(minYear / 10) * 10; decade <= maxYear; decade += 10) {
+                decades.push(`${decade}s`);
+            }
+            setYearList(["All", ...decades]);
+        } else {
+            setYearList(["All"]);
+        }
     }, [allMovies]);
 
     // -------------------- Filter Movies --------------------
@@ -56,11 +74,7 @@ export default function MovieSurvey() {
                 genre === "All" || m.genres?.includes(genre);
 
             const yearVal = m.year ? parseInt(m.year) : 0;
-            const matchYear =
-                year === "All" ||
-                (year === "before2000" && yearVal < 2000) ||
-                (year === "2000to2010" && yearVal >= 2000 && yearVal <= 2010) ||
-                (year === "after2010" && yearVal > 2010);
+            const matchYear = year === "All" || (yearVal >= parseInt(year) && yearVal < parseInt(year) + 10);
 
             return matchSearch && matchGenre && matchYear;
         });
@@ -123,42 +137,66 @@ export default function MovieSurvey() {
                 title: m.title,
                 rating: ratings[m.id],
                 genres: m.genres,
+                poster: details[m.id]?.poster || m.poster || null,
             }));
-    
+
         if (!ratedMovies.length) {
             alert("Please rate at least one movie!");
             return;
         }
-    
+
         setSubmitting(true);
-    
+
         try {
             // CHANGED: BATCH WRITE instead of looped addDoc
             const batch = writeBatch(db);
-    
+
             ratedMovies.forEach((r) => {
                 const ref = doc(collection(db, "ratings"));
                 batch.set(ref, {
                     userId: user.uid,
                     movieId: r.movieId,
+                    title: r.title,
+                    genres: r.genres,
+                    poster: r.poster || null,
                     rating: r.rating,
                     createdAt: serverTimestamp()
                 });
             });
-    
+
             await batch.commit(); // CHANGED: single network operation
-    
+
+            // Save rated movies to localStorage for profile history
+            const surveyHistory = localStorage.getItem(`surveyHistory_${user.uid}`)
+                ? JSON.parse(localStorage.getItem(`surveyHistory_${user.uid}`))
+                : [];
+
+            const newHistory = [
+                {
+                    timestamp: new Date().toISOString(),
+                    movies: ratedMovies
+                },
+                ...surveyHistory.slice(0, 9) // Keep last 10 survey sessions
+            ];
+
+            localStorage.setItem(`surveyHistory_${user.uid}`, JSON.stringify(newHistory));
+
             // CHANGED: send ratings directly to backend (NO Firestore re-read)
+            const userRef = doc(db, "users", user.uid);
+            const snap = await getDoc(userRef);
+            const theta_u = snap.data()?.theta_u ?? 0.5;
+
             const resp = await fine_tune_recommend({
-                ratings: ratedMovies   // CHANGED: payload added
+                ratings: ratedMovies,
+                theta_u: theta_u,
             });
-    
+
             const explanations = resp?.recommendations || [];
-    
-            navigate("/recommend", { 
-                state: { fromSurvey: true, explanations } 
+
+            navigate("/recommend", {
+                state: { fromSurvey: true, explanations }
             });
-    
+
         } catch (err) {
             console.error(err);
             alert("Failed to generate recommendations.");
@@ -176,7 +214,7 @@ export default function MovieSurvey() {
             </section>
         );
     }
-    
+
 
     // -------------------- Render --------------------
     return (
@@ -187,6 +225,7 @@ export default function MovieSurvey() {
             <div className="controls-row">
                 <input
                     type="text"
+                    className="search-input"
                     placeholder="Search..."
                     value={search}
                     onChange={(e) => {
@@ -196,6 +235,7 @@ export default function MovieSurvey() {
                 />
 
                 <select
+                    className="genre-select"
                     value={genre}
                     onChange={(e) => {
                         setGenre(e.target.value);
@@ -208,16 +248,16 @@ export default function MovieSurvey() {
                 </select>
 
                 <select
+                    className="year-select"
                     value={year}
                     onChange={(e) => {
                         setYear(e.target.value);
                         setPage(1);
                     }}
                 >
-                    <option value="All">All Years</option>
-                    <option value="before2000">Before 2000</option>
-                    <option value="2000to2010">2000–2010</option>
-                    <option value="after2010">After 2010</option>
+                    {yearList.map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                    ))}
                 </select>
             </div>
 
@@ -242,14 +282,14 @@ export default function MovieSurvey() {
             {/* Load More */}
             {visibleMovies.length < filteredMovies.length && (
                 <div className="load-more">
-                    <button onClick={() => setPage(page + 1)}>Load Next Page →</button>
+                    <button className="load-btn" onClick={() => setPage(page + 1)}>Load Next Page →</button>
                 </div>
             )}
 
             {/* ✅ ✅ ✅ SUBMIT BUTTON DISABLED DURING LOADING */}
             <div className="floating-submit">
-                <button 
-                    className="submit-btn" 
+                <button
+                    className="submit-btn"
                     onClick={handleSubmit}
                     disabled={submitting}
                 >

@@ -49,8 +49,13 @@ body {
 
 /* Animated text glow */
 @keyframes glowText {
-  from { text-shadow: 0 0 5px rgba(229,9,20,0.5); }
-  to { text-shadow: 0 0 15px rgba(229,9,20,0.9), 0 0 25px rgba(229,9,20,0.7); }
+  from {
+    text-shadow: 0 0 5px rgba(229, 9, 20, 0.5);
+  }
+
+  to {
+    text-shadow: 0 0 15px rgba(229, 9, 20, 0.9), 0 0 25px rgba(229, 9, 20, 0.7);
+  }
 }
 
 /* Search & Dropdown Controls */
@@ -66,7 +71,10 @@ body {
 }
 
 @keyframes fadeInUp {
-  to { opacity: 1; transform: translateY(0); }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .search-input,
@@ -147,7 +155,10 @@ body {
 }
 
 @keyframes cardFadeIn {
-  to { transform: translateY(0); opacity: 1; }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .survey-card:hover {
@@ -199,8 +210,15 @@ body {
 }
 
 @keyframes fadeInText {
-  from { opacity: 0; transform: translateY(5px);}
-  to { opacity: 1; transform: translateY(0);}
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .card-meta {
@@ -248,8 +266,15 @@ body {
 
 /* Pulse Animation */
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0px rgba(229,9,20,0.3); }
-  50% { box-shadow: 0 0 8px rgba(229,9,20,0.6); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0px rgba(229, 9, 20, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 8px rgba(229, 9, 20, 0.6);
+  }
 }
 
 /* Floating Submit */
@@ -279,8 +304,13 @@ body {
 }
 
 @keyframes btnGlow {
-  from { box-shadow: 0 8px 20px rgba(229,9,20,0.5); }
-  to { box-shadow: 0 0 35px rgba(229,9,20,0.9); }
+  from {
+    box-shadow: 0 8px 20px rgba(229, 9, 20, 0.5);
+  }
+
+  to {
+    box-shadow: 0 0 35px rgba(229, 9, 20, 0.9);
+  }
 }
 
 /* Loading / Error / Thanks */

@@ -1,34 +1,37 @@
 // src/components/RecommendCard.jsx
 
-export default function RecommendCard({ text, saved, onSave }) {
-    return (
-      <div
-        style={{
-          padding: '12px 14px',
-          borderRadius: '10px',
-          backgroundColor: '#111',
-          border: '1px solid #333',
-        }}
-      >
-        <div
-          style={{
-            whiteSpace: 'pre-wrap',
-            marginBottom: '8px',
-            fontSize: '0.95rem',
-          }}
-        >
-          {text}
+import fallbackPoster from "../assets/logo.png";
+import "./RecommendationCard.css";
+
+export default function RecommendationCard({ title, genres, poster, explanation, onSave }) {
+  return (
+    <div className="rec-card">
+
+      {/* Left side = Poster */}
+      <div className="rec-left">
+        <img
+          src={poster || fallbackPoster}
+          alt={title}
+          className="rec-poster"
+          onError={(e) => (e.currentTarget.src = fallbackPoster)}
+        />
+      </div>
+
+      {/* Right side = Text */}
+      <div className="rec-right">
+        <h3 className="rec-title">{title}</h3>
+        <div className="rec-genres">{genres?.join(" · ")}</div>
+
+        <div className="rec-explanation">
+          {explanation}
         </div>
-        <button
-          type="button"
-          className="submit-btn"
-          disabled={saved}
-          onClick={onSave}
-        >
-          {saved ? 'Saved' : 'Save'}
+
+        <button className="submit-btn" onClick={onSave}>
+          ❤️ Save Recommendation
         </button>
       </div>
-    );
-  }
-  
-  
+
+    </div>
+  );
+}
+

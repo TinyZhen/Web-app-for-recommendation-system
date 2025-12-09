@@ -82,7 +82,10 @@ coverage.xml
 # Environment variables / secrets
 *.env
 .env.*
+backend/.env
 
 .DS_Store
 
 convert.py
+backend/data/*.pkl
+backend/data/*.pth

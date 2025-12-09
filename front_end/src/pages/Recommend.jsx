@@ -1,256 +1,193 @@
-// import { useEffect, useState } from 'react';
-// import { fetchRecommendations } from '../lib/api.js';
-// import { useAuth } from '../auth/AuthProvider';
-// import { useLocation } from 'react-router-dom'; // ⬅️ NEW
-// import '../style/Recommend.css';
+import { useEffect, useState } from "react";
+import { db } from "../firebase";
+import { useLocation } from "react-router-dom";
+import { useAuth } from "../auth/AuthProvider";
 
-// export default function Recommend() {
-//   const { user, loading: authLoading } = useAuth();
-//   const location = useLocation(); // ⬅️ NEW
-//   const explanations = location.state?.explanations || []; // ⬅️ NEW
-
-//   const [items, setItems] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState('');
-
-//   useEffect(() => {
-//     if (authLoading || !user) return;
-
-//     let active = true;
-//     (async () => {
-//       try {
-//         const data = await fetchRecommendations();
-//         if (active) setItems(data.items || []);
-//       } catch (e) {
-//         setError(e.message || 'Failed to load recs');
-//       } finally {
-//         if (active) setLoading(false);
-//       }
-//     })();
-//     return () => { active = false; };
-//   }, [authLoading, user]);
-
-//   return (
-//     <div>
-//       <main className="container">
-//         <div className="rec-card">
-//           <h2>Recommend</h2>
-
-//           {user && (
-//             <p style={{ fontSize: '0.9rem', color: '#666' }}>
-//               Current user UID: <strong>{user.uid}</strong>
-//             </p>
-//           )}
-
-//           {/* ⬇️ NEW: show explanations (if passed from Survey) */}
-//           {explanations.length > 0 && (
-//             <div style={{ margin: '16px 0' }}>
-//               <h3 style={{ marginBottom: 8 }}>Why these picks (experiment):</h3>
-//               <ol style={{ paddingLeft: 18 }}>
-//                 {explanations.map((line, idx) => (
-//                   <li key={idx} style={{ marginBottom: 6, whiteSpace: 'pre-wrap' }}>
-//                     {line}
-//                   </li>
-//                 ))}
-//               </ol>
-//               <hr style={{ margin: '16px 0' }} />
-//             </div>
-//           )}
-
-//           {loading && <p className="muted">Loading recommendations…</p>}
-//           {error && <p className="error">{error}</p>}
-
-//           {!loading && !error && (
-//             <ul>
-//               {items.map((m) => (
-//                 <li key={m.movie_id} style={{ marginBottom: 8 }}>
-//                   <strong>{m.title}</strong>{' '}
-//                   <span className="muted">(score {m.score.toFixed(2)})</span>
-//                   {m.reason && <div className="muted">{m.reason}</div>}
-//                 </li>
-//               ))}
-//             </ul>
-//           )}
-//         </div>
-//       </main>
-//     </div>
-//   );
-// }
-
-// src/pages/Recommend.jsx
-import { useEffect, useState } from 'react';
-import { useAuth } from '../auth/AuthProvider';
-import { useLocation } from 'react-router-dom';
-import '../style/Recommend.css';
-import RecommendCard from '../components/RecommendCard.jsx';
-import SavedRecommendCard from '../components/SavedRecommendCard.jsx';
-
-import { db } from '../firebase';
 import {
   collection,
   addDoc,
   serverTimestamp,
-  query,
-  where,
-  getDocs,
-} from 'firebase/firestore';
+} from "firebase/firestore";
+
+import fallbackPoster from "../assets/logo.png";
+import "../style/Recommend.css";
 
 export default function Recommend() {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
 
-  // Are we coming from the Survey submit?
-  const fromSurvey = location.state?.fromSurvey || false;
+  const surveyExplanations = location.state?.explanations || [];
 
-  // Explanations passed from MovieSurvey (may start with "1 : ", "2 : ", etc.)
-  const rawExplanations = location.state?.explanations || [];
-
-  // Strip leading "1 :", "2 :", etc.
-  const explanations = rawExplanations.map((line) =>
-    typeof line === 'string' ? line.replace(/^\s*\d+\s*:\s*/, '') : ''
-  );
-
-  // Saved recommendations for this user
-  const [items, setItems] = useState([]);
+  const [recs, setRecs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
-  // Track which explanation cards are saved (for the Save button state)
-  const [savedExplanationIndexes, setSavedExplanationIndexes] = useState([]);
+  const displayName = user?.displayName || "User";
 
-  // Load SAVED recommendations when opening Recommend from navbar
-  useEffect(() => {
-    if (authLoading || !user) return;
-    if (fromSurvey) {
-      // When coming from survey, we only care about explanation cards
-      setLoading(false);
-      return;
-    }
 
-    let active = true;
-    (async () => {
-      try {
-        const q = query(
-          collection(db, 'savedRecommendations'),
-          where('userId', '==', user.uid)
-        );
-        const snap = await getDocs(q);
+  // -----------------------------
+  // Poster Fetch
+  // -----------------------------
+  async function fetchPosterFromOMDB(title) {
+    if (!title) return null;
 
-        // Sort client-side newest → oldest
-        const data = snap.docs
-          .map((d) => ({
-            id: d.id,
-            ...d.data(),
-          }))
-          .sort((a, b) => {
-            const aTs = a.createdAt?.seconds || 0;
-            const bTs = b.createdAt?.seconds || 0;
-            return bTs - aTs;
-          });
+    const apiKey = import.meta.env.VITE_OMDB_API_KEY;
+    if (!apiKey) return null;
 
-        if (active) setItems(data);
-      } catch (e) {
-        if (active) setError(e.message || 'Failed to load saved recommendations');
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [authLoading, user, fromSurvey]);
-
-  // Save an explanation to Firestore when "Save" on a card is clicked
-  const handleSaveExplanation = async (idx, text) => {
-    if (!user?.uid) {
-      console.warn('No user, cannot save explanation');
-      return;
-    }
+    const cleanTitle = title.replace(/\s*\(\d{4}\)\s*$/, "").trim();
+    const url = `https://www.omdbapi.com/?apikey=${apiKey}&t=${encodeURIComponent(cleanTitle)}&type=movie`;
 
     try {
-      await addDoc(collection(db, 'savedRecommendations'), {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data?.Response === "True" && data.Poster && data.Poster !== "N/A") {
+        return data.Poster;
+      }
+    } catch (err) {
+      console.error("OMDB fetch error", err);
+    }
+
+    return null;
+  }
+
+  // -----------------------------
+  // Load recommendations (NO FIREBASE)
+  // -----------------------------
+  useEffect(() => {
+    const load = async () => {
+      const cacheKey = `lastSurveyRecs_${user?.uid || displayName}`;
+
+      let items = [];
+
+      if (surveyExplanations.length > 0) {
+        // Loaded from Survey
+        items = surveyExplanations.map((rec) => ({
+          title: rec.title,
+          genres: Array.isArray(rec.genres) ? rec.genres : (rec.genres ? [rec.genres] : []),
+          explanation: rec.explanation,
+          poster: null,
+          movie_id: rec.movie_id || null,
+        }));
+
+        // Save to localStorage (for recovery after refresh)
+        localStorage.setItem(cacheKey, JSON.stringify(items));
+      } else {
+        // No Survey → Read from localStorage
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          items = JSON.parse(cached);
+        }
+      }
+
+      // Fetch posters and sanitize explanations
+      for (const rec of items) {
+        if (!rec.poster || rec.poster === "N/A") {
+          const poster = await fetchPosterFromOMDB(rec.title);
+          rec.poster = poster || fallbackPoster;
+        }
+      }
+
+      setRecs(items);
+      setLoading(false);
+    };
+
+    load();
+  }, [surveyExplanations, displayName, user?.uid]);
+
+  // -----------------------------
+  // Save → ONLY write to Firestor
+  // -----------------------------
+  async function handleSave(rec) {
+    try {
+      const docRef = await addDoc(collection(db, "savedRecommendations"), {
         userId: user.uid,
-        explanation: text,
+        title: rec.title,
+        genres: rec.genres || [],
+        explanation: rec.explanation,
+        poster: rec.poster || null,
+        movieId: rec.movie_id || null,
         createdAt: serverTimestamp(),
       });
 
-      // Mark this explanation card as saved in the UI
-      setSavedExplanationIndexes((prev) =>
-        prev.includes(idx) ? prev : [...prev, idx]
-      );
-      console.log('Saved explanation to Firestore for user', user.uid);
-    } catch (e) {
-      console.error('Failed to save explanation', e);
+      // Update Favourite cache (does not affect Recommend)
+      const favKey = `savedRecs_${user.uid}`;
+      const favCached = JSON.parse(localStorage.getItem(favKey) || "[]");
+
+      favCached.unshift({
+        id: docRef.id,
+        title: rec.title,
+        genres: rec.genres || [],
+        explanation: rec.explanation,
+        poster: rec.poster,
+        movieId: rec.movie_id,
+        createdAt: { seconds: Math.floor(Date.now() / 1000) },
+      });
+
+      localStorage.setItem(favKey, JSON.stringify(favCached));
+
+      alert("Saved!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save recommendation");
     }
-  };
+  }
+
+  // -----------------------------
+  // UI
+  // -----------------------------
+  if (loading) return <p>Loading recommendations...</p>;
 
   return (
-    <div>
-      <main className="container">
-        <div className="rec-card">
-          <h2>Recommend</h2>
+    <section className="survey-shell">
+      <h2 className="survey-title">🎬 Recommendations for {displayName}</h2>
+      <p className="survey-sub">
+        Here are your personalized recommendations based on your movie taste.
+      </p>
 
-          {user && (
-            <p style={{ fontSize: '0.9rem', color: '#666' }}>
-              Current user UID: <strong>{user.uid}</strong>
-            </p>
-          )}
+      <div className="survey-grid">
+        {recs.map((rec, idx) => (
+          <div key={idx} className="survey-card">
 
-          {/* Explanation cards (from bias pipeline, when coming from Survey) */}
-          {explanations.length > 0 && (
-            <div style={{ margin: '16px 0' }}>
-              <h3 style={{ marginBottom: 8 }}>Why these picks (experiment):</h3>
-
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                }}
-              >
-                {explanations.map((line, idx) => (
-                  <RecommendCard
-                    key={idx}
-                    text={line}
-                    saved={savedExplanationIndexes.includes(idx)}
-                    onSave={() => handleSaveExplanation(idx, line)}
-                  />
-                ))}
+            {/* Poster */}
+            <div className="card-left">
+              <div className="poster-frame">
+                <img
+                  src={rec.poster || fallbackPoster}
+                  alt={rec.title}
+                  className="poster-img"
+                />
               </div>
-
-              <hr style={{ margin: '16px 0' }} />
             </div>
-          )}
 
-          {/* SAVED RECOMMENDATIONS AS CARDS (when clicking Recommend in navbar) */}
-          {!fromSurvey && loading && (
-            <p className="muted">Loading saved recommendations…</p>
-          )}
-          {!fromSurvey && error && <p className="error">{error}</p>}
+            {/* Info */}
+            <div className="card-right">
+              <h3 className="card-title">{rec.title}</h3>
 
-          {!fromSurvey && !loading && !error && (
-            items.length === 0 ? (
-              <p className="muted">No saved recommendations yet.</p>
-            ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                }}
-              >
-                {items.map((rec) => (
-                  <SavedRecommendCard
-                    key={rec.id}
-                    text={rec.explanation}
-                  />
-                ))}
+              <div className="card-meta">
+                {(rec.genres || []).join(", ")}
               </div>
-            )
-          )}
-        </div>
-      </main>
-    </div>
+
+              <div className="recommend-reason">
+                <h4 style={{ marginTop: "10px", marginBottom: "6px" }}>
+                  Why we recommend this:
+                </h4>
+                <div className="rec-explanation-scroll">
+                  {rec.explanation}
+                </div>
+              </div>
+
+              <button
+                className={rec.saved ? "submit-btn saved-btn" : "submit-btn"}
+                style={{ marginTop: "12px" }}
+                onClick={() => handleSave(rec)}
+                disabled={rec.saved}
+              >
+                {rec.saved ? "✓ Saved" : "❤️ Save Recommendation"}
+              </button>
+            </div>
+
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

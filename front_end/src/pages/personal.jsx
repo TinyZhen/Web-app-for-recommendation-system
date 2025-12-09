@@ -177,6 +177,7 @@ import { useState, useEffect } from "react";
 import { db } from "../firebase";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "../auth/AuthProvider";
+import { fetchOmdbData } from "../lib/api";
 import "../style/Profile.css";
 
 export default function Profile() {
@@ -195,6 +196,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
+  const [surveyHistory, setSurveyHistory] = useState([]);
 
   // 🔹 Load user profile from Firestore
   useEffect(() => {
@@ -216,6 +218,12 @@ export default function Profile() {
             theta_u: data.theta_u !== undefined ? Number(data.theta_u) : 0.5,
           }));
         }
+
+        // Load survey history from localStorage
+        const history = localStorage.getItem(`surveyHistory_${user.uid}`);
+        if (history) {
+          setSurveyHistory(JSON.parse(history));
+        }
       } catch (err) {
         console.error("Error loading profile:", err);
       } finally {
@@ -225,6 +233,56 @@ export default function Profile() {
 
     loadProfile();
   }, [user]);
+
+  // Lazy-fetch missing posters for the latest survey session
+  useEffect(() => {
+    if (!surveyHistory || surveyHistory.length === 0) return;
+    const latest = surveyHistory[0];
+    if (!latest?.movies || latest.movies.length === 0) return;
+
+    let cancelled = false;
+
+    (async () => {
+      const updated = { ...latest, movies: [...latest.movies] };
+      let changed = false;
+
+      for (let i = 0; i < updated.movies.length; i++) {
+        const m = updated.movies[i];
+        if (!m.poster) {
+          try {
+            const info = await fetchOmdbData(m.title);
+            if (cancelled) return;
+            if (info?.poster) {
+              updated.movies[i] = { ...m, poster: info.poster };
+              changed = true;
+            }
+            // small delay to be polite
+            await new Promise((r) => setTimeout(r, 200));
+          } catch (e) {
+            console.warn('Failed to fetch poster for', m.title, e);
+          }
+        }
+      }
+
+      if (changed && !cancelled) {
+        // write back to surveyHistory state and localStorage
+        setSurveyHistory((prev) => {
+          const rest = prev.slice(1);
+          const newArr = [updated, ...rest];
+          try {
+            localStorage.setItem(`surveyHistory_${user.uid}`, JSON.stringify(newArr));
+          } catch (e) {
+            console.warn('Failed to save updated survey history', e);
+          }
+          return newArr;
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [surveyHistory, user]);
 
   // 🔹 Update handler (convert age + occupation + theta_u to numbers)
   const handleChange = (e) => {
@@ -387,6 +445,40 @@ export default function Profile() {
 
         {status && <p className="save-status">{status}</p>}
       </form>
+
+      {/* Survey Flyer (latest session) */}
+      {surveyHistory.length > 0 && (() => {
+        // Use the latest session and deduplicate movies by movieId
+        const latest = surveyHistory[0];
+        const movies = latest?.movies || [];
+        const seen = new Set();
+        const unique = [];
+        for (const m of movies) {
+          const id = m.movieId ?? m.movieId === 0 ? m.movieId : m.title;
+          if (!seen.has(id)) {
+            seen.add(id);
+            unique.push(m);
+          }
+        }
+
+        return (
+          <div className="survey-flyer">
+            <h3 className="history-title">📽️ Recently Rated</h3>
+            <div className="flyer-scroll">
+              {unique.map((movie) => (
+                <div key={movie.movieId || movie.title} className="flyer-card">
+                  {movie.poster && (
+                    <img src={movie.poster} alt={movie.title} className="flyer-thumb" />
+                  )}
+                  <div className="flyer-title">{movie.title}</div>
+                  <div className="flyer-genres">{Array.isArray(movie.genres) ? movie.genres.join(' · ') : ''}</div>
+                  <div className="flyer-rating">{'⭐'.repeat(movie.rating)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </section>
   );
 }

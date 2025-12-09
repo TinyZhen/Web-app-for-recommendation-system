@@ -8,6 +8,8 @@ from models import Recommendation, RecsResponse, Favorites, FavsResponse
 from typing import List
 import pandas as pd
 import torch
+from firebase_admin_init import fb_read
+import joblib
 
 # ⬇️ import the callable from combined_biases (old)
 from combined_biases import compute_explanations
@@ -177,72 +179,78 @@ def favorites(uid: str = Depends(get_current_user)):
 
 # CHANGED: accepts ratings directly from frontend payload
 @app.post("/fine_tune_recommend")
-async def fine_tune_recommend(
-    payload: dict = Body(...),  # ✅ CHANGED
-    uid: str = Depends(get_current_user)
-):
+async def fine_tune_recommend(payload: dict = Body(...), uid: str = Depends(get_current_user)):
     try:
-        # ✅ CHANGED: Load model & encoders
-        model, jbf_module, user_enc, item_enc, bias_df = load_model_and_encoders()
+        model, jbf, user_enc, item_enc, bias_df = load_model_and_encoders()
 
-        # ✅ Keep Firestore user profile read (1 safe read)
-        user_ref = db.collection("users").document(uid)
-        user_doc = user_ref.get()
+        # Firestore READ #1
+        fb_read(f"users/{uid}")
+        user_doc = db.collection("users").document(uid).get()
         if not user_doc.exists:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(404, "User not found")
+        user_profile = user_doc.to_dict()
 
-        user_data = user_doc.to_dict()
-
-        theta_u = float(user_data.get("theta_u", 0.5)) 
-
-        # ✅✅✅ CHANGED: Ratings now come from frontend — NO Firestore READ
         ratings_list = payload.get("ratings")
         if not ratings_list:
-            raise HTTPException(status_code=400, detail="No ratings provided")
+            raise HTTPException(400, "Missing ratings")
 
-        # ✅ CHANGED: Convert UID to numeric ID
-        numeric_id = abs(hash(uid)) % (10**6)
+        # Firestore READ #2 completed (ratings from frontend instead)
 
-        new_user_ratings = pd.DataFrame(ratings_list)
-        new_user_ratings["UserID"] = numeric_id
-        new_user_ratings["MovieID"] = new_user_ratings["movieId"].astype(int)
-        new_user_ratings["Rating"] = new_user_ratings["rating"].astype(float)
-        new_user_ratings = new_user_ratings[["UserID", "MovieID", "Rating"]]
+        numeric_uid = abs(hash(uid)) % (10**8)
 
-        # ✅ Load ML-1M dataset locally (no Firebase here)
+        df = pd.DataFrame(ratings_list)
+        df["UserID"] = numeric_uid
+        df["MovieID"] = df["movieId"].astype(int)
+        df["Rating"] = df["rating"].astype(float)
+        df = df[["UserID", "MovieID", "Rating"]]
+
+        # Load ML-1M base data locally
         movies = pd.read_csv("data/movies.dat", sep="::", engine="python",
-                             names=["MovieID", "Title", "Genres"], encoding="ISO-8859-1")
-
+                             names=["MovieID","Title","Genres"], encoding="ISO-8859-1")
         users = pd.read_csv("data/users.dat", sep="::", engine="python",
-                             names=["UserID", "Gender", "Age", "Occupation", "Zip-code"])
-
+                             names=["UserID","Gender","Age","Occupation","Zip-code"])
         ratings_all = pd.read_csv("data/ratings.dat", sep="::", engine="python",
-                             names=["UserID", "MovieID", "Rating", "Timestamp"])
+                                names=["UserID", "MovieID", "Rating", "Timestamp"])
+        
+        is_new = numeric_uid not in user_enc.classes_
 
-        # ✅ Fine-tune model
-        model = fine_tune_user(
-            model, jbf_module, user_enc, item_enc, bias_df,
-            numeric_id, new_user_ratings
-        )
+        if is_new:
+            model, user_enc = fine_tune_user(model, jbf, user_enc, item_enc, bias_df,
+                                             numeric_uid, df)
 
-        # ✅ Setup Groq client
-        client = OpenAI(
-            api_key=os.getenv("GROQ_API_KEY"),
-            base_url="https://api.groq.com/openai/v1"
-        )
+            # Save updates
+            torch.save(model.state_dict(), "data/neural_cf_fair_model.pth")
+            joblib.dump(user_enc, "data/user_encoder.pkl")
+
+        client = OpenAI(api_key=os.getenv("GROQ_API_KEY"), base_url="https://api.groq.com/openai/v1")
+        theta_u = float(user_profile.get("theta_u", 0.0))
+
+        # Allow frontend to request a different number of recommendations via payload.top_k
+        try:
+            top_k = int(payload.get("top_k", 6))
+        except Exception:
+            top_k = 5
 
         results = recommend_and_explain(
-            model, jbf_module, user_enc, item_enc, bias_df,
-            numeric_id, user_data, users, movies, ratings_all, client, theta_u=theta_u
+            model,
+            jbf,
+            user_enc,
+            item_enc,
+            bias_df,
+            numeric_uid,
+            user_profile,
+            users,
+            movies,
+            ratings_all,
+            client,
+            theta_u,
+            top_k=top_k,
         )
-
-        # ✅✅✅ CHANGED: NO MORE FIRESTORE WRITES HERE (CRITICAL FIX)
-        explanation_strings = [rec.get("explanation", "") for rec in results]
 
         return {
             "user_uid": uid,
-            "recommendations": explanation_strings
+            "recommendations": results
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(500, str(e))

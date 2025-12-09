@@ -11,10 +11,10 @@
 
 .grid-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 28px;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 48px;
     width: 100%;
-    max-width: 1600px;
+    max-width: 1800px;
     margin-top: 30px;
 }
 
@@ -37,10 +37,11 @@
 }
 
 .poster-frame {
-    width: 100%;
-    aspect-ratio: 2 / 3;
+    width: 160px;
+    height: 240px;
+    margin: 16px auto 0;
     overflow: hidden;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
     flex-shrink: 0;
 }
 
@@ -56,11 +57,14 @@
 }
 
 .movie-body {
-    padding: 16px 18px;
+    padding: 16px 18px 20px;
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
 }
 
 .movie-title {
@@ -68,6 +72,7 @@
     font-weight: 600;
     margin-bottom: 6px;
     line-height: 1.3;
+    width: 100%;
 }
 
 .movie-year {
@@ -80,6 +85,7 @@
     font-size: 0.9rem;
     color: #aaa;
     margin-bottom: 10px;
+    width: 100%;
 }
 
 .movie-detail {
@@ -90,6 +96,8 @@
     background: rgba(255, 255, 255, 0.04);
     border-radius: 10px;
     padding: 10px 14px;
+    width: 100%;
+    text-align: center;
 }
 
 .movie-plot {
@@ -122,8 +130,13 @@
 }
 
 .rating-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     text-align: center;
     margin-top: 10px;
+    gap: 6px;
+    width: 100%;
 }
 
 .star {
@@ -247,9 +260,9 @@
     justify-content: center;
     align-items: center;
     font-size: 1.2rem;
-  }
-  
-  .spinner {
+}
+
+.spinner {
     margin-top: 20px;
     width: 50px;
     height: 50px;
@@ -257,9 +270,10 @@
     border-top: 6px solid #000;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-  }
-  
-  @keyframes spin {
-    100% { transform: rotate(360deg); }
-  }
-  
+}
+
+@keyframes spin {
+    100% {
+        transform: rotate(360deg);
+    }
+}
