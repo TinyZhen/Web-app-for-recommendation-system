@@ -311,3 +311,94 @@
     border-radius: 8px;
     margin-bottom: 8px;
 }
+
+.movie-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    backdrop-filter: blur(3px);
+}
+
+/* ---- BIG Modal Container ---- */
+.movie-modal {
+    background: #1b1b1b;
+    border-radius: 16px;
+    padding: 32px;
+    width: 85%;
+    max-width: 1100px;
+    max-height: 90vh;
+    color: white;
+    display: flex;
+    gap: 36px;
+    /* 🔥 左右间距更大 */
+    overflow: hidden;
+    animation: modalPop 0.25s ease-out;
+}
+
+/* ---- Poster ---- */
+.movie-modal-poster {
+    width: 320px;
+    height: 480px;
+    object-fit: cover;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+/* ---- Right Side Content ---- */
+.movie-modal-content {
+    overflow-y: auto;
+    max-height: 480px;
+    padding-right: 12px;
+    line-height: 1.6;
+    /* 🔥 文本行距更舒服 */
+}
+
+/* ---- Title ---- */
+.movie-modal-content h2 {
+    font-size: 2rem;
+    margin-bottom: 18px;
+    /* 🔥 Title 和内容之间拉开 */
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+/* ---- Metadata (Genres / Rating / Year etc.) ---- */
+.movie-modal-content p {
+    margin-bottom: 14px;
+    /* 🔥 每段落有间距 */
+    font-size: 1.05rem;
+    color: #e8e8e8;
+}
+
+/* Labels 更明显 */
+.movie-modal-content strong {
+    color: #ffcc66;
+    /* 🔥 更容易区分结构 */
+    font-weight: 600;
+}
+
+/* ---- Plot 专区 ---- */
+.movie-modal-content .plot-text {
+    margin-top: 20px;
+    margin-bottom: 18px;
+    line-height: 1.65;
+    /* 🔥 长文更易读 */
+    color: #f0f0f0;
+}
+
+/* ---- Close Button ---- */
+.close-btn {
+    margin-top: 24px;
+    /* 🔥 按钮与内容分开 */
+    background: #ff7675;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: white;
+    font-size: 1rem;
+}
