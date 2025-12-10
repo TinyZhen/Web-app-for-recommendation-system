@@ -1,9 +1,21 @@
+##
+# @file utility.py
+# @brief Utility functions for user/item context extraction and LLM-based explanations
+# @details Provides helper functions to retrieve user demographics, item information,
+#          and generate natural language explanations for recommendations using LLMs.
+#
 import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.preprocessing import MinMaxScaler
-#Define reusable E_ui extractor
+
+##
+# @brief Extract bias attribution vector from bias DataFrame row
+# @param row pd.Series Row from bias DataFrame containing bias components
+# @return dict Dictionary with keys: PB, IB, DB_gender, DB_age, DB_occupation, DB_zipcode
+#        Each value is the bias attribution score for that component
+#
 def get_E_ui(row):
     return {
         "PB": row["E_learned_PB"],
@@ -14,38 +26,31 @@ def get_E_ui(row):
         "DB_zipcode": row["E_learned_DB_zipcode"]
     }
 
-def get_M_i(item_id,movies):
+##
+# @brief Extract item (movie) context for explanation generation
+# @param item_id int MovieID to look up
+# @param movies pd.DataFrame Movies DataFrame with columns: MovieID, Title, Genres, popularity
+# @return dict Dictionary with keys: item_id, title, category, popularity
+#        category is extracted from the first genre in the Genres field
+#
+def get_M_i(item_id, movies):
     row = movies[movies.MovieID == item_id].iloc[0]
     return {
         "item_id": row["MovieID"],
         "title": row["Title"],
         "category": row["Genres"].split("|")[0],  # or full genres
-        "popularity": row.get("popularity",0.0) #Just for safety
+        "popularity": row.get("popularity", 0.0) #Just for safety
     }
 
-# def get_X_u(user_id,users):
-#     # row = users[users.UserID == user_id].iloc[0]
-#     subset = users[users.UserID == user_id]
-
-#     # ✅ FIX: if numeric user_id (hash) doesn't exist in users.dat, fallback
-#     if subset.empty:
-#         return {
-#             "user_id": user_id,
-#             "gender": "Unknown",
-#             "age": 0,
-#             "occupation": "Unknown",
-#             "zip": "00000"
-#         }
-
-#     row = subset.iloc[0]
-#     return {
-#         "user_id": row["UserID"],
-#         "gender": row["Gender"],
-#         "age": row["Age"],
-#         "occupation": row["Occupation"],
-#         "zip": row["Zip-code"]
-#     }
-
+##
+# @brief Extract user context for explanation generation
+# @param user_id int Numeric user ID
+# @param users pd.DataFrame MovieLens users.dat with demographics
+# @param user_profile dict Optional Firestore user profile (takes precedence)
+# @return dict User context dictionary with keys: name, user_id, gender, age, occupation, zip
+# @details Prefers Firestore user_profile if available, otherwise falls back to MovieLens.
+#          If user not found in either source, returns default values.
+#
 def get_X_u(user_id, users, user_profile=None):
     """
     Returns user context for explanation.

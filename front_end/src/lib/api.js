@@ -1,3 +1,10 @@
+/**
+ * @file src/lib/api.js
+ * @description Frontend API helper functions for communicating with backend services
+ *              and external APIs (OMDb). Functions assume Firebase `auth` is exported
+ *              from `src/firebase.js` and will attach the current user's ID token.
+ */
+
 // import { auth } from '../firebase.js';
 
 // const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
@@ -100,6 +107,14 @@ import { auth } from '../firebase.js';
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 const OMDB_API_KEY = import.meta.env.VITE_OMDB_API_KEY;
 
+/**
+ * Perform an authenticated fetch to the backend using the current Firebase user.
+ *
+ * @param {string} path - Relative path on the API server (e.g. '/recommend')
+ * @param {Object} [options={}] - Fetch options (method, body, headers, etc.)
+ * @returns {Promise<any>} - Parsed JSON response from the backend
+ * @throws {Error} - If user not signed in or if response is not ok
+ */
 async function authFetch(path, options = {}) {
   const user = auth.currentUser;
   if (!user) throw new Error('Not signed in');
@@ -123,11 +138,20 @@ async function authFetch(path, options = {}) {
   return res.json();
 }
 
+/**
+ * Fetch mock or real recommendations for the logged-in user.
+ * @returns {Promise<any>} API response json (recommendations array)
+ */
 export async function fetchRecommendations() {
   return authFetch('/recommend');
 }
 
 // OLD pipeline (still usable)
+/**
+ * Trigger the backend job that runs the combined_biases pipeline.
+ * @param {number} [limit=10] - Maximum number of explanations to request
+ * @returns {Promise<any>} API response json
+ */
 export async function runCombinedBiases(limit = 10) {
   return authFetch(`/run-combined-biases?limit=${encodeURIComponent(limit)}`, {
     method: 'POST'
@@ -135,6 +159,11 @@ export async function runCombinedBiases(limit = 10) {
 }
 
 // CHANGED: now accepts ratings payload
+/**
+ * Call backend fine-tune + recommend endpoint with a ratings payload.
+ * @param {Object} payload - Request payload, e.g. { ratings: [{ movieId, rating }], top_k: 6 }
+ * @returns {Promise<any>} API response json containing recommendations and explanations
+ */
 export async function fine_tune_recommend(payload) {
   return authFetch('/fine_tune_recommend', {
     method: 'POST',
@@ -142,10 +171,21 @@ export async function fine_tune_recommend(payload) {
   });
 }
 
+/**
+ * Fetch the logged-in user's favorite movies.
+ * @returns {Promise<any>} API response json (favorites array)
+ */
 export async function fetchFavorites() {
   return authFetch('/favorites', { method: 'POST' });
 }
 
+/**
+ * Fetch supplemental movie metadata from OMDb by title.
+ * Normalizes common title formatting (trailing year, trailing comma forms).
+ *
+ * @param {string} title - Movie title (may include year in parentheses)
+ * @returns {Promise<Object|null>} - Object with poster, plot, year, director, actors, genre or null
+ */
 export async function fetchOmdbData(title) {
   if (!title) return null;
 

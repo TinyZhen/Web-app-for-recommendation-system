@@ -54,6 +54,24 @@ import { db } from "../firebase";
 import { useState } from "react";
 import "../style/PersonalInfoForm.css";
 
+/**
+ * PersonalInfoForm
+ *
+ * Collects basic demographic information from the user and saves it to
+ * Firestore. Also captures the user's preferred explanation style (theta_u)
+ * which controls the verbosity/fairness sensitivity of generated explanations.
+ *
+ * Props:
+ * @param {Object} props.user - Firebase user object ({ uid, email, ... }).
+ * @param {Function} props.onNext - Callback invoked after successful save.
+ * @param {string|null} props.error - Optional error message to display.
+ * @param {Function} props.setError - Setter to update the error message.
+ *
+ * Behavior:
+ * - Persists fields to `users/{uid}` with `updatedAt` timestamp.
+ * - Stores `theta_u` as a numeric value (0.2, 0.5, 0.9).
+ * - Calls `onNext()` when save succeeds.
+ */
 export default function PersonalInfoForm({ user, onNext, error, setError }) {
   const [gender, setGender] = useState("");
   const [age, setAge] = useState(null);

@@ -1,3 +1,8 @@
+/**
+ * @file src/firebase.js
+ * @description Firebase initialization and exports used across the frontend app.
+ */
+
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth, browserLocalPersistence, setPersistence } from 'firebase/auth';
@@ -20,10 +25,22 @@ const firebaseConfig = {
 
 
 const app = initializeApp(firebaseConfig);
+
+/**
+ * Firestore instance. Uses the persistent local cache for better offline behavior.
+ * @type {import('firebase/firestore').Firestore}
+ */
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
   })
 });
+
+/**
+ * Firebase Auth instance.
+ * @type {import('firebase/auth').Auth}
+ */
 export const auth = getAuth(app);
+
+// Persist auth in browser local storage so the user stays signed in across reloads
 setPersistence(auth, browserLocalPersistence);

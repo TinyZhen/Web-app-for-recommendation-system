@@ -1,3 +1,10 @@
+##
+# @file fine_tune.py
+# @brief Fine-tuning and inference pipeline for fairness-aware recommendation system
+# @details Provides functions to load pre-trained models, fine-tune for new users,
+#          and generate fairness-aware recommendations with LLM explanations.
+#
+
 # backend/fine_tune.py
 import os
 import numpy as np
@@ -13,15 +20,28 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
 
-# ------------------------------
-# Hyperparameters
-# ------------------------------
-EMBEDDING_DIM = 32
-LAMBDA_FAIR = 1.0
-MU_REG = 1e-4
-FINE_TUNE_EPOCHS = 30
+# ==============================================================
+# @brief Hyperparameters for fine-tuning and training
+# ==============================================================
+EMBEDDING_DIM = 32      ##< Dimension of user/item embeddings
+LAMBDA_FAIR = 1.0       ##< Fairness regularization weight in loss function
+MU_REG = 1e-4           ##< L2 regularization weight
+FINE_TUNE_EPOCHS = 30   ##< Number of epochs for fine-tuning new user
 
 
+##
+# @brief Load pre-trained neural network model and encoders
+# @param model_dir str Optional path to model directory. If None, uses default 'data/' subdirectory.
+# @return tuple (model, jbf_module, user_encoder, item_encoder, bias_dataframe)
+#         - model: NeuralCF instance with loaded weights
+#         - jbf_module: CombinedBiasInteractionModule instance
+#         - user_encoder: LabelEncoder for user IDs
+#         - item_encoder: LabelEncoder for item IDs
+#         - base_bias_df: DataFrame with bias annotations
+# @details Loads all necessary components for inference: embeddings are sized
+#          to match the saved model, ensuring compatibility with new user fine-tuning.
+#          Model is set to eval mode and jbf_module is also in eval mode.
+#
 def load_model_and_encoders(model_dir=None):
     if model_dir is None:
         model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
@@ -56,6 +76,22 @@ def load_model_and_encoders(model_dir=None):
     return model, jbf_module, user_encoder, item_encoder, base_bias_df
 
 
+
+
+##
+# @brief Fine-tune model embeddings for a new user
+# @param model NeuralCF Pre-trained model to fine-tune
+# @param jbf CombinedBiasInteractionModule Fairness module (fixed during fine-tuning)
+# @param user_enc LabelEncoder User ID encoder (updated with new user)
+# @param item_enc LabelEncoder Item ID encoder (unchanged)
+# @param bias_df pd.DataFrame Pre-computed bias factors for all items
+# @param new_user_id int Numeric user ID (hashed Firebase UID)
+# @param new_user_ratings pd.DataFrame User ratings with columns: UserID, MovieID, Rating
+# @return tuple (fine_tuned_model, updated_user_encoder)
+# @details Expands user embedding matrices to accommodate new user, performs gradient-based
+#          optimization on user embedding parameters only. Fairness loss term pulls predictions
+#          away from biased directions. Returns updated model and encoder.
+#
 def fine_tune_user(model, jbf, user_enc, item_enc, bias_df, new_user_id, new_user_ratings):
 
     # ---------------------------
@@ -105,6 +141,27 @@ def fine_tune_user(model, jbf, user_enc, item_enc, bias_df, new_user_id, new_use
     return model, user_enc
 
 
+##
+# @brief Generate fairness-aware recommendations with LLM explanations for a user
+# @param model NeuralCF Fine-tuned neural CF model
+# @param jbf_module CombinedBiasInteractionModule Fairness module
+# @param user_encoder LabelEncoder Encoder for user IDs
+# @param item_encoder LabelEncoder Encoder for item IDs  
+# @param base_bias_df pd.DataFrame Pre-computed bias factors for items
+# @param new_user_id int Numeric user ID
+# @param user_profile dict Firestore user profile with demographics (name, gender, age, etc.)
+# @param users pd.DataFrame MovieLens users.dat with demographic info
+# @param movies pd.DataFrame MovieLens movies.dat with titles and genres
+# @param ratings pd.DataFrame MovieLens ratings.dat historical rating data
+# @param client OpenAI OpenAI/Groq client for LLM-based explanations
+# @param theta_u float Fairness transparency parameter [0.0, 1.0]
+#        Controls explanation detail level and fairness emphasis
+# @param top_k int Number of recommendations to generate (default: 6)
+# @return list List of recommendation dictionaries with keys: item_id, title, score, explanation
+# @details Scores items using fairness-adjusted predictions, retrieves top-k recommendations,
+#          extracts bias attribution vectors, and generates natural language explanations
+#          using an LLM conditioned on user profile and bias factors.
+#
 def recommend_and_explain(
     model, jbf_module, user_encoder, item_encoder, base_bias_df,
     new_user_id, user_profile, users, movies, ratings, client, theta_u, top_k=6

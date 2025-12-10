@@ -6,6 +6,25 @@ import { useAuth } from "../auth/AuthProvider";
 import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 import { collection, addDoc, serverTimestamp, writeBatch, doc, getDoc } from "firebase/firestore";
+/**
+ * MovieSurvey
+ *
+ * Interactive survey UI that lets users browse a local movie catalog,
+ * rate a selection of movies, and submit ratings to generate personalized
+ * recommendations with explanations. The component:
+ * - Loads local `movies.json` data
+ * - Prefetches poster/plot info from OMDb for visible movies
+ * - Lets the user filter by search/genre/year and rate visible movies
+ * - Writes ratings to Firestore in a single batch and calls the backend
+ *   `fine_tune_recommend` endpoint to obtain explanations
+ * - Navigates to the `/recommend` page carrying the explanation results
+ *
+ * Notes:
+ * - Uses `useAuth` to access the current `user` and `db` for Firestore writes.
+ * - Debounces poster fetches slightly to avoid hammering OMDb.
+ *
+ * Returns: JSX.Element
+ */
 export default function MovieSurvey() {
     const { user } = useAuth();
     const navigate = useNavigate();

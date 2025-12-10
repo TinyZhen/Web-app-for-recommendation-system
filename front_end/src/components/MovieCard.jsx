@@ -2,6 +2,19 @@
 import fallbackPoster from "../assets/logo.png";
 import StarRating from "./StarRating";
 
+/**
+ * MovieCard component
+ *
+ * @param {Object} props
+ * @param {Object} props.movie - Minimal movie object (title, genres, poster)
+ * @param {Object} [props.info] - Optional enriched info (poster, plot, director, actors, year)
+ * @param {boolean} [props.expanded=false] - Whether the card is expanded to show details
+ * @param {boolean} [props.loading=false] - Whether detail info is currently loading
+ * @param {number} [props.rating] - User rating value (0-5)
+ * @param {Function} [props.onToggle] - Click handler to toggle expand state
+ * @param {Function} [props.onRate] - Callback when rating changes
+ * @returns {JSX.Element}
+ */
 export default function MovieCard({ movie, info, expanded, loading, rating, onToggle, onRate }) {
     return (
         <article

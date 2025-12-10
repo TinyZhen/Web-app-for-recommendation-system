@@ -12,6 +12,14 @@ import {
 import fallbackPoster from "../assets/logo.png";
 import "../style/Recommend.css";
 
+/**
+ * Recommend page
+ *
+ * Shows recommendations (from survey or cache), fetches posters from OMDb when needed,
+ * and allows saving recommendations to Firestore.
+ *
+ * @returns {JSX.Element}
+ */
 export default function Recommend() {
   const { user } = useAuth();
   const location = useLocation();
@@ -134,7 +142,6 @@ export default function Recommend() {
   // -----------------------------
   // UI
   // -----------------------------
-  if (loading) return <p>Loading recommendations...</p>;
 
   return (
     <section className="survey-shell">

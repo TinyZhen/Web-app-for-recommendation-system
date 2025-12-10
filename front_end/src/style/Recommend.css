@@ -35,16 +35,15 @@
 }
 
 .rec-explanation-scroll {
-  max-height: 150px;
-  /* Limit height */
+  max-height: 180px;
   overflow-y: auto;
-  /* Enable vertical scrolling */
-  padding-right: 6px;
+  padding: 14px;
+  padding-right: 8px;
   line-height: 1.45;
   background: rgba(255, 255, 255, 0.07);
   border-radius: 8px;
-  padding: 10px;
   margin-top: 10px;
+  white-space: pre-wrap;
 }
 
 /* Style scrollbar (optional) */
@@ -108,10 +107,6 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
-.rec-explanation-scroll {
-  max-height: 260px;
-  padding: 14px;
-}
 
 .submit-btn,
 .save-btn {
@@ -183,7 +178,6 @@
   }
 }
 
-/* Optional: subtle saved badge on the card (small pill) */
 .survey-card .saved-pill {
   position: absolute;
   right: 18px;
