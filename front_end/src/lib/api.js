@@ -186,23 +186,58 @@ export async function fetchFavorites() {
  * @param {string} title - Movie title (may include year in parentheses)
  * @returns {Promise<Object|null>} - Object with poster, plot, year, director, actors, genre or null
  */
+
+const OMDB_TTL = 12 * 60 * 60 * 1000; // 12 hours
+const omdbMemoryCache = {};
+
 export async function fetchOmdbData(title) {
   if (!title) return null;
 
-  let cleanTitle = title
-    .replace(/\s*\(\d{4}\)\s*$/, '')
-    .trim();
-
+  // Normalize title
+  let cleanTitle = title.replace(/\s*\(\d{4}\)\s*$/, "").trim();
   const match = cleanTitle.match(/(.+),\s*(The|A|An)$/i);
   if (match) cleanTitle = `${match[2]} ${match[1]}`;
 
-  const url = `https://www.omdbapi.com/?apikey=${OMDB_API_KEY}&t=${encodeURIComponent(cleanTitle)}&plot=full`;
+  const key = `omdb_${cleanTitle.toLowerCase()}`;
+
+  // -----------------------------
+  // 1. Memory Cache (fastest)
+  // -----------------------------
+  const mem = omdbMemoryCache[key];
+  if (mem && mem.expire > Date.now()) {
+    // console.log("🔥 OMDb from memory:", cleanTitle);
+    return mem.data;
+  }
+
+  // -----------------------------
+  // 2. LocalStorage Cache
+  // -----------------------------
+  const stored = localStorage.getItem(key);
+  if (stored) {
+    const obj = JSON.parse(stored);
+    if (obj.expire > Date.now()) {
+      // console.log("🔥 OMDb from localStorage:", cleanTitle);
+      omdbMemoryCache[key] = obj; // sync into memory cache
+      return obj.data;
+    } else {
+      localStorage.removeItem(key);
+    }
+  }
+
+  // -----------------------------
+  // 3. Real fetch (only once per 12h)
+  // -----------------------------
+  const apiKey = import.meta.env.VITE_OMDB_API_KEY;
+  const url = `https://www.omdbapi.com/?apikey=${apiKey}&t=${encodeURIComponent(cleanTitle)}&plot=full`;
 
   try {
+    // console.log("🌐 OMDb API request:", cleanTitle);
     const res = await fetch(url);
     const data = await res.json();
+
     if (data.Response === "False") return null;
-    return {
+
+    const normalized = {
       poster: data.Poster !== "N/A" ? data.Poster : null,
       plot: data.Plot || "",
       year: data.Year,
@@ -210,6 +245,17 @@ export async function fetchOmdbData(title) {
       actors: data.Actors,
       genre: data.Genre,
     };
+
+    const cacheObj = {
+      data: normalized,
+      expire: Date.now() + OMDB_TTL,
+    };
+
+    // store in both memory + localStorage
+    omdbMemoryCache[key] = cacheObj;
+    localStorage.setItem(key, JSON.stringify(cacheObj));
+
+    return normalized;
   } catch (e) {
     console.warn("OMDb fetch error:", e);
     return null;

@@ -114,7 +114,7 @@ export default function Recommend() {
     };
 
     load();
-  }, [fromSurvey, surveyExplanations, displayName, user?.uid]);
+  }, [fromSurvey, JSON.stringify(surveyExplanations), user?.uid]);
 
 
   // -----------------------------
