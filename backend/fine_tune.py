@@ -173,43 +173,87 @@ def recommend_and_explain(
         fair_preds = preds - LAMBDA_FAIR * jbf_module(bias_t)  # fairness adjustment
 
     # ==============================================================
-    # Step 2: Build preference vector from user's ratings (方案 A 核心)
+    # Step 2: Genre-based personalization (MovieLens format)
     # ==============================================================
-    final_scores = fair_preds.clone()  # by default
 
     if ratings_input and len(ratings_input) > 0:
         try:
-            # ---- 2.1 Extract rated movies + their scores ----
-            movie_ids = [r["movieId"] for r in ratings_input]
-            scores = torch.tensor([r["rating"] for r in ratings_input], dtype=torch.float32)
-            scores = scores / scores.max()   # normalize 1–5 → 0–1
+            # ------------------------------------------------
+            # 2.1 Extract all genres from FULL movies DF
+            #     since movies['Genres'] = "A|B|C" string
+            # ------------------------------------------------
+            all_genres = set()
+            for gs in movies['Genres'].fillna(''):
+                for g in gs.split('|'):
+                    if g.strip():
+                        all_genres.add(g.strip())
 
-            # ---- 2.2 Get embedding indices for these movies ----
+            all_genres = sorted(all_genres)
+            genre_to_idx = {g: idx for idx, g in enumerate(all_genres)}
+            num_genres = len(all_genres)
+
+            # ------------------------------------------------
+            # 2.2 Build genre matrix for ALL items
+            # ------------------------------------------------
+            genre_matrix = torch.zeros((num_items, num_genres), dtype=torch.float32)
+
+            for idx, mid in enumerate(item_encoder.classes_):
+                row = movies[movies['MovieID'] == int(mid)]
+                if not row.empty:
+                    gs = row.iloc[0]['Genres']
+                    for g in gs.split('|'):
+                        g = g.strip()
+                        if g in genre_to_idx:
+                            genre_matrix[idx, genre_to_idx[g]] = 1.0
+
+            # ------------------------------------------------
+            # 2.3 Build user preference vector from ratings_input
+            # ------------------------------------------------
+            movie_ids = [int(r["movieId"]) for r in ratings_input]
+            scores = torch.tensor([r["rating"] for r in ratings_input], dtype=torch.float32)
+            scores = scores / scores.max()
+
             item_indices = item_encoder.transform(movie_ids)
             item_indices = torch.tensor(item_indices, dtype=torch.long)
 
-            # ---- 2.3 Fetch embeddings of rated movies ----
-            rated_vecs = model.item_embeddings(item_indices)
+            selected_genres = genre_matrix[item_indices]  
+            user_genre_pref = (selected_genres.T @ scores).float()
 
-            # ---- 2.4 Weighted average → preference vector ----
-            pref_vec = (rated_vecs * scores.unsqueeze(1)).mean(dim=0)
-            pref_vec = torch.nn.functional.normalize(pref_vec, dim=0)
+            if user_genre_pref.sum() > 0:
+                user_genre_pref = user_genre_pref / user_genre_pref.sum()
+            else:
+                user_genre_pref = torch.ones(num_genres) / num_genres
 
-            # ---- 2.5 Compute similarity to all items ----
-            all_item_vecs = model.item_embeddings(item_t)
-            sim_scores = torch.nn.functional.cosine_similarity(
-                all_item_vecs, pref_vec.unsqueeze(0), dim=1
-            )
+            # ------------------------------------------------
+            # 2.4 Compute GENRE similarity
+            # ------------------------------------------------
+            sim_scores = genre_matrix @ user_genre_pref
 
-            # ---- 2.6 Combine fairness-CF score + preference score ----
-            ALPHA = 6  # ↑ increase for stronger personalization
-            final_scores = fair_preds + ALPHA * sim_scores
+            # ------------------------------------------------
+            # 2.5 Combine with fairness-aware CF scores
+            # ------------------------------------------------
+            ALPHA = 0.35
+            min_std = 0.2
+            eps = 1e-8
+
+            fair_mean = fair_preds.mean()
+            fair_std = fair_preds.std(unbiased=False).clamp(min=min_std)
+            fair_z = (fair_preds - fair_mean) / (fair_std + eps)
+
+            sim_mean = sim_scores.mean()
+            sim_std = sim_scores.std(unbiased=False).clamp(min=min_std)
+            sim_z = (sim_scores - sim_mean) / (sim_std + eps)
+
+            final_scores = fair_z + ALPHA * sim_z
+
             print("🔥 fair_preds[:10]:", fair_preds[:10])
-            print("🔥 sim_scores[:10]:", sim_scores[:10] if 'sim_scores' in locals() else None)
+            print("🔥 sim_scores[:10]:", sim_scores[:10])
             print("🔥 final_scores[:10]:", final_scores[:10])
+
         except Exception as e:
             print(">>> Preference vector failed:", e)
             final_scores = fair_preds
+
 
     # ==============================================================
     # Step 3: Select top-K ranked items
