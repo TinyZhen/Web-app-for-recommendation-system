@@ -1,0 +1,67 @@
+.share-container {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .share-main-btn {
+    background-color: #1e90ff;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+  }
+  
+  .share-main-btn:hover {
+    transform: scale(1.1);
+  }
+  
+  .share-card {
+    position: absolute;
+    top: 45px;
+    right: 0;
+    background-color: #111;
+    color: #fff;
+    border-radius: 12px;
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  
+    /* Animation */
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  
+  .share-card.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  
+  .share-option-btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    font-size: 20px;
+    padding: 6px;
+    border-radius: 50%;
+    transition: background 0.2s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .share-option-btn:hover {
+    background-color: #333;
+    transform: scale(1.2);
+  }
