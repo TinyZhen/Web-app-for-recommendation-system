@@ -39,6 +39,11 @@ export default function RecommendationCard({ title, genres, poster, explanation,
           {explanation}
         </div>
 
+        {/* SHARE BUTTON */}
+        <ShareButtonCard
+          message={`🔥 Check this out! "${title}" was recommended to me — and it's amazing!\n\nWhy?\n${explanation}\n\n`}
+        />
+
         <button className="submit-btn" onClick={onSave}>
           ❤️ Save Recommendation
         </button>
