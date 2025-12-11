@@ -107,23 +107,27 @@ export default function MovieSurvey() {
     // -------------------- Prefetch posters (only visible movies) --------------------
     useEffect(() => {
         async function prefetch() {
-            for (const m of visibleMovies) {
-                if (details[m.id]?.poster) continue;
+            const need = visibleMovies.filter(m => !details[m.id]?.poster);
 
-                await new Promise(r => setTimeout(r, 300));
+            if (need.length === 0) return;
 
-                const info = await fetchOmdbData(m.title);
-                if (info?.poster) {
-                    setDetails(prev => ({
-                        ...prev,
-                        [m.id]: {
-                            ...(prev[m.id] || {}),
-                            poster: info.poster
-                        }
-                    }));
+            const results = await Promise.all(
+                need.map(async (m) => {
+                    const info = await fetchOmdbData(m.title);
+                    return { id: m.id, poster: info?.poster || null };
+                })
+            );
+
+            setDetails(prev => {
+                const updated = { ...prev };
+                for (const r of results) {
+                    if (!updated[r.id]) updated[r.id] = {};
+                    updated[r.id].poster = r.poster;
                 }
-            }
+                return updated;
+            });
         }
+
         prefetch();
     }, [visibleMovies]);
 
