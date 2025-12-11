@@ -26,7 +26,7 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 EMBEDDING_DIM = 32      ##< Dimension of user/item embeddings
 LAMBDA_FAIR = 1.0       ##< Fairness regularization weight in loss function
 MU_REG = 1e-4           ##< L2 regularization weight
-FINE_TUNE_EPOCHS = 30   ##< Number of epochs for fine-tuning new user
+FINE_TUNE_EPOCHS = 300   ##< Number of epochs for fine-tuning new user
 
 
 ##
@@ -142,50 +142,86 @@ def fine_tune_user(model, jbf, user_enc, item_enc, bias_df, new_user_id, new_use
 
 
 ##
-# @brief Generate fairness-aware recommendations with LLM explanations for a user
-# @param model NeuralCF Fine-tuned neural CF model
-# @param jbf_module CombinedBiasInteractionModule Fairness module
-# @param user_encoder LabelEncoder Encoder for user IDs
-# @param item_encoder LabelEncoder Encoder for item IDs  
-# @param base_bias_df pd.DataFrame Pre-computed bias factors for items
-# @param new_user_id int Numeric user ID
-# @param user_profile dict Firestore user profile with demographics (name, gender, age, etc.)
-# @param users pd.DataFrame MovieLens users.dat with demographic info
-# @param movies pd.DataFrame MovieLens movies.dat with titles and genres
-# @param ratings pd.DataFrame MovieLens ratings.dat historical rating data
-# @param client OpenAI OpenAI/Groq client for LLM-based explanations
-# @param theta_u float Fairness transparency parameter [0.0, 1.0]
-#        Controls explanation detail level and fairness emphasis
-# @param top_k int Number of recommendations to generate (default: 6)
-# @return list List of recommendation dictionaries with keys: item_id, title, score, explanation
-# @details Scores items using fairness-adjusted predictions, retrieves top-k recommendations,
-#          extracts bias attribution vectors, and generates natural language explanations
-#          using an LLM conditioned on user profile and bias factors.
+# @brief Generate fairness-aware + rating-aware recommendations
+#        Uses user ratings to build a preference vector for personalized ranking.
 #
 def recommend_and_explain(
     model, jbf_module, user_encoder, item_encoder, base_bias_df,
-    new_user_id, user_profile, users, movies, ratings, client, theta_u, top_k=6
+    new_user_id, user_profile, users, movies, ratings,
+    client, theta_u, ratings_input, top_k=6
 ):
 
+    # ==============================================================
+    # Prepare item embeddings and bias vectors
+    # ==============================================================
     num_items = len(item_encoder.classes_)
     uid = user_encoder.transform([new_user_id])[0]
+
     user_t = torch.tensor([uid] * num_items)
     item_t = torch.arange(num_items)
 
+    # Build fair bias matrix aligned with item order
     bias_df = base_bias_df.drop_duplicates("MovieID")[["MovieID"] + BIAS_COLS]
     bias_df = bias_df.set_index("MovieID").reindex(item_encoder.classes_, fill_value=0.0)
     bias_t = torch.tensor(bias_df[BIAS_COLS].values, dtype=torch.float32)
 
+    # ==============================================================
+    # Step 1: Original fairness-aware CF predictions
+    # ==============================================================
     with torch.no_grad():
-        preds = model(user_t, item_t)
-        fair_preds = preds - LAMBDA_FAIR * jbf_module(bias_t)
+        preds = model(user_t, item_t)            # raw CF scores
+        fair_preds = preds - LAMBDA_FAIR * jbf_module(bias_t)  # fairness adjustment
 
-    top_idx = torch.topk(fair_preds, top_k).indices.numpy()
+    # ==============================================================
+    # Step 2: Build preference vector from user's ratings (方案 A 核心)
+    # ==============================================================
+    final_scores = fair_preds.clone()  # by default
+
+    if ratings_input and len(ratings_input) > 0:
+        try:
+            # ---- 2.1 Extract rated movies + their scores ----
+            movie_ids = [r["movieId"] for r in ratings_input]
+            scores = torch.tensor([r["rating"] for r in ratings_input], dtype=torch.float32)
+            scores = scores / scores.max()   # normalize 1–5 → 0–1
+
+            # ---- 2.2 Get embedding indices for these movies ----
+            item_indices = item_encoder.transform(movie_ids)
+            item_indices = torch.tensor(item_indices, dtype=torch.long)
+
+            # ---- 2.3 Fetch embeddings of rated movies ----
+            rated_vecs = model.item_embeddings(item_indices)
+
+            # ---- 2.4 Weighted average → preference vector ----
+            pref_vec = (rated_vecs * scores.unsqueeze(1)).mean(dim=0)
+            pref_vec = torch.nn.functional.normalize(pref_vec, dim=0)
+
+            # ---- 2.5 Compute similarity to all items ----
+            all_item_vecs = model.item_embeddings(item_t)
+            sim_scores = torch.nn.functional.cosine_similarity(
+                all_item_vecs, pref_vec.unsqueeze(0), dim=1
+            )
+
+            # ---- 2.6 Combine fairness-CF score + preference score ----
+            ALPHA = 6  # ↑ increase for stronger personalization
+            final_scores = fair_preds + ALPHA * sim_scores
+            print("🔥 fair_preds[:10]:", fair_preds[:10])
+            print("🔥 sim_scores[:10]:", sim_scores[:10] if 'sim_scores' in locals() else None)
+            print("🔥 final_scores[:10]:", final_scores[:10])
+        except Exception as e:
+            print(">>> Preference vector failed:", e)
+            final_scores = fair_preds
+
+    # ==============================================================
+    # Step 3: Select top-K ranked items
+    # ==============================================================
+    top_idx = torch.topk(final_scores, top_k).indices.numpy()
     recommended_items = item_encoder.inverse_transform(top_idx)
 
     results = []
-    # theta_u = float(np.random.rand())
 
+    # ==============================================================
+    # Step 4: LLM explanation (your original code)
+    # ==============================================================
     for mid in recommended_items:
         row = bias_df.loc[mid].to_dict()
         raw_bias_vec = np.array(list(row.values()), dtype=float)
@@ -193,9 +229,7 @@ def recommend_and_explain(
         probs = exps / exps.sum() if exps.sum() > 0 else np.ones_like(exps) / len(exps)
         E_ui = {k: float(v) for k, v in zip(BIAS_COLS, probs)}
 
-        # X_u = get_X_u(new_user_id, users)
         X_u = get_X_u(new_user_id, users, user_profile=user_profile)
-
         M_i = get_M_i(mid, movies)
         explanation = generate_llm_explanation(E_ui, X_u, M_i, client, theta_u)
 

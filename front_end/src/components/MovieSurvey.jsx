@@ -204,7 +204,7 @@ export default function MovieSurvey() {
             const userRef = doc(db, "users", user.uid);
             const snap = await getDoc(userRef);
             const theta_u = snap.data()?.theta_u ?? 0.5;
-
+            console.log("🚀 sending ratings:", ratedMovies);
             const resp = await fine_tune_recommend({
                 ratings: ratedMovies,
                 theta_u: theta_u,

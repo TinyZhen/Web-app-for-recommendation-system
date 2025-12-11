@@ -57,6 +57,7 @@ class CombinedBiasInteractionModule(nn.Module):
         return self.interaction_layer(jbf_input).squeeze()
 
 
+
 ##
 # @class NeuralCF
 # @brief Neural Collaborative Filtering model combining MLP and GMF
@@ -106,6 +107,22 @@ class NeuralCF(nn.Module):
         gmf_out = u_gmf * i_gmf
         return self.output_layer(torch.cat([gmf_out, mlp_out], dim=1)).squeeze()
 
+    ##
+    # @brief Return combined item embedding for similarity-based personalization.
+    # @param item_indices torch.Tensor of item IDs
+    # @return torch.Tensor Embedding matrix [num_items, 2 * embedding_dim]
+    #
+    def item_embeddings(self, item_indices):
+        """
+        Build the same representation the model uses internally:
+        item_embedding = concat(GMF_embedding, MLP_embedding)
+        """
+
+        i_gmf = self.item_embedding_gmf(item_indices)   # [N, dim]
+        i_mlp = self.item_embedding_mlp(item_indices)   # [N, dim]
+
+        # concat into final embedding used for similarity calculations
+        return torch.cat([i_gmf, i_mlp], dim=1)          # [N, 2*dim]
 ##
 # @class RatingsWithBiasDataset
 # @brief PyTorch Dataset for ratings combined with bias information

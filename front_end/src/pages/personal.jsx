@@ -276,24 +276,26 @@ export default function Profile() {
 
       {/* Survey Flyer (latest session) */}
       {surveyHistory.length > 0 && (() => {
-        // Use the latest session and deduplicate movies by movieId
-        const latest = surveyHistory[0];
-        const movies = latest?.movies || [];
+        // Flatten all survey sessions into one list
+        let movies = surveyHistory.flatMap(s => s.movies);
+
+        // Deduplicate by movieId
         const seen = new Set();
-        const unique = [];
-        for (const m of movies) {
-          const id = m.movieId ?? m.movieId === 0 ? m.movieId : m.title;
-          if (!seen.has(id)) {
-            seen.add(id);
-            unique.push(m);
-          }
-        }
+        movies = movies.filter(m => {
+          const id = m.movieId ?? m.title;
+          if (seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        });
+
+        // Limit to 50 recent ratings
+        movies = movies.slice(0, 50);
 
         return (
           <div className="survey-flyer">
             <h3 className="history-title">📽️ Recently Rated</h3>
             <div className="flyer-scroll">
-              {unique.map((movie) => (
+              {movies.map((movie) => (
                 <div
                   key={movie.movieId || movie.title}
                   className="flyer-card"
@@ -308,14 +310,19 @@ export default function Profile() {
                     <img src={movie.poster} alt={movie.title} className="flyer-thumb" />
                   )}
                   <div className="flyer-title">{movie.title}</div>
-                  <div className="flyer-genres">{Array.isArray(movie.genres) ? movie.genres.join(' · ') : ''}</div>
-                  <div className="flyer-rating">{'⭐'.repeat(movie.rating)}</div>
+                  <div className="flyer-genres">
+                    {Array.isArray(movie.genres) ? movie.genres.join(" · ") : ""}
+                  </div>
+                  <div className="flyer-rating">
+                    {"⭐".repeat(movie.rating)}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         );
       })()}
+
 
       {selectedMovie && (
         <div className="movie-modal-overlay" onClick={() => setSelectedMovie(null)}>

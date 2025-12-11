@@ -250,7 +250,7 @@ export default function Favourites() {
 
           {user && (
             <p style={{ fontSize: '0.9rem', color: '#666' }}>
-              Current user UID: <strong>{user.uid}</strong>
+              {/* Current user UID: <strong>{user.uid}</strong> */}
             </p>
           )}
 

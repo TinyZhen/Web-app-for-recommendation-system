@@ -129,53 +129,56 @@ def favorites(uid: str = Depends(get_current_user)) -> FavsResponse:
 
 @app.post("/fine_tune_recommend")
 async def fine_tune_recommend(payload: dict = Body(...), uid: str = Depends(get_current_user)) -> dict:
-    """Fine-tune model for a user using provided ratings and return recommendations.
-
-    Expected payload shape:
-    {
-        "ratings": [{"movieId": <int or str>, "rating": <float>}],
-        "top_k": <int, optional>
-    }
-
-    The endpoint performs these high-level steps:
-    1. Load model and encoders
-    2. Read Firestore user profile
-    3. Build a small DataFrame from `payload["ratings"]`
-    4. Fine-tune user embedding if needed
-    5. Compute fairness-adjusted predictions and obtain top-k
-    6. Generate/expose explanations via `recommend_and_explain`
-
-    Returns a dict: {"user_uid": uid, "recommendations": [...]} where recommendations
-    are the same objects produced by `recommend_and_explain` (list of dicts).
     """
-    # Basic validation
+    Fine-tune model for a user using provided ratings and return recommendations.
+
+    Expected payload:
+    {
+        "ratings": [{"movieId": 1, "rating": 4}, ...],
+        "top_k": 6
+    }
+    """
+
+    # ---------------------------
+    # 1. Validate payload
+    # ---------------------------
     ratings_list = payload.get("ratings")
+    print("🔥 backend received ratings:", ratings_list)
     if not ratings_list or not isinstance(ratings_list, list):
         raise HTTPException(status_code=400, detail="Missing or invalid 'ratings' in payload")
 
     if load_model_and_encoders is None:
-        raise HTTPException(status_code=501, detail="Fine-tuning functionality not available in this environment")
+        raise HTTPException(status_code=501, detail="Fine-tuning unavailable")
 
     try:
-        # Load model and encoders
+        # ---------------------------
+        # 2. Load model, encoders
+        # ---------------------------
         model, jbf, user_enc, item_enc, bias_df = load_model_and_encoders()
 
-        # Verify Firestore user exists
+        # ---------------------------
+        # 3. Load Firestore profile
+        # ---------------------------
         fb_read(f"users/{uid}")
         user_doc = db.collection("users").document(uid).get()
         if not user_doc.exists:
             raise HTTPException(status_code=404, detail="User not found")
         user_profile = user_doc.to_dict()
 
-        # Convert ratings payload → DataFrame used by fine-tune pipeline
+        # ---------------------------
+        # 4. Convert ratings into DF used for fine-tuning
+        # ---------------------------
         numeric_uid = abs(hash(uid)) % (10 ** 8)
+
         df = pd.DataFrame(ratings_list)
         df["UserID"] = numeric_uid
         df["MovieID"] = df["movieId"].astype(int)
         df["Rating"] = df["rating"].astype(float)
         df = df[["UserID", "MovieID", "Rating"]]
 
-        # Load base MovieLens files (local)
+        # ---------------------------
+        # 5. Load MovieLens files
+        # ---------------------------
         movies = pd.read_csv(os.path.join("data", "movies.dat"), sep="::", engine="python",
                              names=["MovieID", "Title", "Genres"], encoding="ISO-8859-1")
         users = pd.read_csv(os.path.join("data", "users.dat"), sep="::", engine="python",
@@ -183,25 +186,49 @@ async def fine_tune_recommend(payload: dict = Body(...), uid: str = Depends(get_
         ratings_all = pd.read_csv(os.path.join("data", "ratings.dat"), sep="::", engine="python",
                                   names=["UserID", "MovieID", "Rating", "Timestamp"])
 
-        # Fine-tune if this user isn't already encoded
+        # ---------------------------
+        # 6. Fine-tune (only if new user)
+        # ---------------------------
         is_new = numeric_uid not in user_enc.classes_
         if is_new:
-            model, user_enc = fine_tune_user(model, jbf, user_enc, item_enc, bias_df, numeric_uid, df)
-            # Persist updates for subsequent calls
+            model, user_enc = fine_tune_user(
+                model, jbf, user_enc, item_enc, bias_df,
+                numeric_uid, df
+            )
+            # Save updated state
             if torch is not None:
                 torch.save(model.state_dict(), os.path.join("data", "neural_cf_fair_model.pth"))
             joblib.dump(user_enc, os.path.join("data", "user_encoder.pkl"))
 
-        # Prepare LLM client
-        client = OpenAI(api_key=os.getenv("GROQ_API_KEY"), base_url="https://api.groq.com/openai/v1")
-        theta_u = float(user_profile.get("theta_u", 0.0))
+        # ---------------------------
+        # 7. Prepare LLM client
+        # ---------------------------
+        client = OpenAI(
+            api_key=os.getenv("GROQ_API_KEY"),
+            base_url="https://api.groq.com/openai/v1"
+        )
 
+        theta_u = float(user_profile.get("theta_u", 0.0))
         top_k = int(payload.get("top_k", 6))
 
+        # ---------------------------
+        # 8. ⭐ Correct call with ratings_input ⭐
+        # ---------------------------
         results = recommend_and_explain(
-            model, jbf, user_enc, item_enc, bias_df,
-            numeric_uid, user_profile, users, movies, ratings_all, client,
-            theta_u, top_k=top_k,
+            model,
+            jbf,
+            user_enc,
+            item_enc,
+            bias_df,
+            numeric_uid,
+            user_profile,
+            users,
+            movies,
+            ratings_all,
+            client,
+            theta_u,
+            ratings_input=ratings_list,   # ⭐⭐⭐ 必须加这个
+            top_k=top_k,
         )
 
         return {"user_uid": uid, "recommendations": results}
@@ -209,6 +236,4 @@ async def fine_tune_recommend(payload: dict = Body(...), uid: str = Depends(get_
     except HTTPException:
         raise
     except Exception as e:
-        # Catch-all: return server error with message
         raise HTTPException(status_code=500, detail=str(e))
-

@@ -24,14 +24,16 @@ export default function Recommend() {
   const { user } = useAuth();
   const location = useLocation();
 
-  const surveyExplanations = location.state?.explanations || [];
+  const fromSurvey = location.state?.fromSurvey || false;
+  const surveyExplanations = fromSurvey ? (location.state?.explanations || []) : [];
 
   const [recs, setRecs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const displayName = user?.displayName || "User";
 
-
+  console.log("DEBUG — fromSurvey:", fromSurvey);
+  console.log("DEBUG — explanations:", surveyExplanations);
   // -----------------------------
   // Poster Fetch
   // -----------------------------
@@ -63,30 +65,43 @@ export default function Recommend() {
   useEffect(() => {
     const load = async () => {
       const cacheKey = `lastSurveyRecs_${user?.uid || displayName}`;
-
       let items = [];
 
-      if (surveyExplanations.length > 0) {
-        // Loaded from Survey
+      // -----------------------------
+      // NEW: If this came from a NEW survey, ignore old cache!
+      // -----------------------------
+      if (fromSurvey) {
+        localStorage.removeItem(cacheKey); // clear previous recs
+
         items = surveyExplanations.map((rec) => ({
           title: rec.title,
           genres: Array.isArray(rec.genres) ? rec.genres : (rec.genres ? [rec.genres] : []),
           explanation: rec.explanation,
           poster: null,
           movie_id: rec.movie_id || null,
+          saved: false, // ⭐ reset saved state
         }));
 
-        // Save to localStorage (for recovery after refresh)
+        // store fresh recs
         localStorage.setItem(cacheKey, JSON.stringify(items));
-      } else {
-        // No Survey → Read from localStorage
+      }
+
+      // -----------------------------
+      // If NOT from a survey → read from localStorage
+      // -----------------------------
+      else {
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
-          items = JSON.parse(cached);
+          items = JSON.parse(cached).map(rec => ({
+            ...rec,
+            saved: false, // ensure saved state resets on new visit
+          }));
         }
       }
 
-      // Fetch posters and sanitize explanations
+      // -----------------------------
+      // Fetch posters
+      // -----------------------------
       for (const rec of items) {
         if (!rec.poster || rec.poster === "N/A") {
           const poster = await fetchPosterFromOMDB(rec.title);
@@ -99,12 +114,13 @@ export default function Recommend() {
     };
 
     load();
-  }, [surveyExplanations, displayName, user?.uid]);
+  }, [fromSurvey, surveyExplanations, displayName, user?.uid]);
+
 
   // -----------------------------
   // Save → ONLY write to Firestor
   // -----------------------------
-  async function handleSave(rec) {
+  async function handleSave(rec, index) {
     try {
       const docRef = await addDoc(collection(db, "savedRecommendations"), {
         userId: user.uid,
@@ -116,7 +132,12 @@ export default function Recommend() {
         createdAt: serverTimestamp(),
       });
 
-      // Update Favourite cache (does not affect Recommend)
+      // update local saved list
+      const updated = [...recs];
+      updated[index].saved = true;
+      setRecs(updated);
+
+      // update cache
       const favKey = `savedRecs_${user.uid}`;
       const favCached = JSON.parse(localStorage.getItem(favKey) || "[]");
 
@@ -132,12 +153,12 @@ export default function Recommend() {
 
       localStorage.setItem(favKey, JSON.stringify(favCached));
 
-      alert("Saved!");
+      // No alert!!
     } catch (err) {
       console.error(err);
-      alert("Failed to save recommendation");
     }
   }
+
 
   // -----------------------------
   // UI
@@ -185,7 +206,7 @@ export default function Recommend() {
               <button
                 className={rec.saved ? "submit-btn saved-btn" : "submit-btn"}
                 style={{ marginTop: "12px" }}
-                onClick={() => handleSave(rec)}
+                onClick={() => handleSave(rec, idx)}
                 disabled={rec.saved}
               >
                 {rec.saved ? "✓ Saved" : "❤️ Save Recommendation"}
