@@ -14,13 +14,13 @@ import {
 
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_API_KEY,
-  authDomain: import.meta.env.VITE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_APP_ID,
-  measurementId: import.meta.env.VITE_MEASUREMENT_ID,
+  apiKey: "AIzaSyDk-FpoY6SJ75ZiUccxcftOF4cTV2aqYiQ",
+  authDomain: "recommender-system-7f868.firebaseapp.com",
+  projectId: "recommender-system-7f868",
+  storageBucket: "recommender-system-7f868.firebasestorage.app",
+  messagingSenderId: "828854541761",
+  appId: "1:828854541761:web:d4d25763442b3eb114e340",
+  measurementId: "G-ME7LRJGMS8"
 };
 
 
