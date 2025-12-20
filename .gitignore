@@ -89,3 +89,5 @@ backend/.env
 convert.py
 backend/data/*.pkl
 backend/data/*.pth
+
+doxygen_output
