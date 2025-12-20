@@ -3,8 +3,8 @@
 # @brief Pydantic models and neural network modules for recommendation system
 # @details Contains data models for API responses and neural network modules for explanation extraction.
 #
-from pydantic import BaseModel, Field
-from typing import List, Optional
+# from pydantic import BaseModel, Field
+# from typing import List, Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -35,125 +35,117 @@ class ExplanationVectorExtractor(nn.Module):
         explanation_vector = F.softmax(raw_bias_scores, dim=1)
         return explanation_vector  # [PB, IB, DB]
 
+##
+# @brief Default order of bias components in the system
+# @details Used consistently across modules: Popularity Bias, Interaction Bias, 
+#          and Demographic Biases (gender, age, occupation, zipcode)
+#
+BIAS_COLS = ["PB", "IB", "DB_gender", "DB_age", "DB_occupation", "DB_zipcode"]
 
 ##
-# @class Recommendation
-# @brief Pydantic model for a single movie recommendation
-# @details Contains movie information and recommendation score/reason.
+# @class CombinedBiasInteractionModule
+# @brief Joint Bias Factor (JBF) module for modeling bias interactions
+# @details Computes pairwise interactions between different bias factors and produces
+#          a fairness adjustment score. Essential for fairness-aware recommendations.
 #
-class Recommendation(BaseModel):
-    movie_id: str      ##< Unique identifier for the movie (IMDb format)
-    title: str         ##< Movie title
-    score: float = Field(ge=0)  ##< Recommendation confidence score (0-1)
-    reason: Optional[str] = None  ##< Human-readable explanation for the recommendation
-
-##
-# @class Favorites
-# @brief Pydantic model for a user's favorite movie
-#
-class Favorites(BaseModel):
-    movie_id: str  ##< Unique identifier for the movie
-    title: str     ##< Movie title
-    
-##
-# @class RecsResponse
-# @brief API response containing recommendations for a user
-# @details Returns personalized movie recommendations with fairness-aware explanations.
-#
-class RecsResponse(BaseModel):
-    user_uid: str                    ##< Firebase user unique identifier
-    items: List[Recommendation]      ##< List of recommended movies
-
-##
-# @class FavsResponse
-# @brief API response containing user's favorite movies
-#
-class FavsResponse(BaseModel):
-    user_uid: str              ##< Firebase user unique identifier
-    items: List[Favorites]     ##< List of favorite movies
-
-##
-# @brief Build a prompt for LLM-based recommendation explanations
-# @details Generates user-friendly prompts adapted to explanation depth parameter (theta_u).
-#          Deeper explanations include more fairness-related factors and transparency.
-#
-# @param E_ui dict Bias attribution vector with keys: PB, IB, DB_gender, DB_age, DB_occupation, DB_zipcode
-# @param X_u dict User context (user_id, gender, age, occupation, zip)
-# @param M_i dict Item context (item_id, title, category, popularity)
-# @param theta_u float Explanation depth parameter in range [0.0, 1.0]
-#        - <= 0.3: brief, single-factor explanation
-#        - <= 0.7: moderate detail, two factors
-#        - > 0.7: detailed, fairness-focused explanation
-#
-# @return str Formatted prompt string for the LLM
-#
-def build_explanation_prompt(E_ui, X_u, M_i, theta_u):
-
-    # Map bias keys to friendly labels
-    BIAS_LABELS = {
-        "PB": "popularity bias",
-        "IB": "interaction patterns",
-        "DB_gender": "gender preferences",
-        "DB_age": "age group tendencies",
-        "DB_occupation": "profession-based interests",
-        "DB_zipcode": "regional viewing trends"
-    }
-
-    # Sort and map top contributing biases
-    sorted_bias = sorted(E_ui.items(), key=lambda x: x[1], reverse=True)
-    top_k = 3 if theta_u > 0.7 else 2 if theta_u > 0.3 else 1
-    top_biases = sorted_bias[:top_k]
-    top_biases_str = ", ".join([BIAS_LABELS.get(k, k.replace("_", " ")) for k, _ in top_biases])
-
-    # User and item context
-    user_context = f"User #{X_u['user_id']}"
-    title = M_i.get('title') or f"Item #{M_i['item_id']}"
-    item_context = f"{title} in the '{M_i['category']}' category"
-
-    # Prompt formats by theta_u
-    if theta_u <= 0.3:
-        prompt = f"""
-        Explain in one friendly sentence why {item_context} was recommended to {user_context}.
-        Base the explanation on the most relevant factor: {top_biases_str}.
-        """.strip()
-
-    elif theta_u <= 0.7:
-        prompt = f"""
-        You're a helpful recommendation explanation assistant.
-
-        Explain why {item_context} was recommended to {user_context}.
-        Mention up to two top contributing factors such as: {top_biases_str}.
-        Keep the explanation concise, user-friendly, and clear.
-        """.strip()
-
-    else:
-        prompt = f"""
-        You are a fairness-aware recommendation explanation assistant.
-
-        User Context: {user_context}
-        Item Context: {item_context}
-        Top contributing fairness-related factors: {top_biases_str}
-
-        Please generate a detailed, thoughtful, and transparent explanation for this recommendation.
-        Focus on fairness and personalization while remaining easy to understand.
-        """.strip()
-
-    return prompt
-
-def generate_llm_explanation(E_ui, X_u, M_i, theta_u, temperature=0.7):
-    # Build prompt using your existing function
-    prompt = build_explanation_prompt(E_ui, X_u, M_i, theta_u)
-
-    try:
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": "You are a fairness-aware recommendation explanation assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=temperature,
-            max_tokens=300
+class CombinedBiasInteractionModule(nn.Module):
+    ##
+    # @brief Initialize the JBF module
+    # @param k int Feature dimension for bias embeddings (default: 16)
+    # @param h int Hidden dimension for interaction layer (default: 32)
+    # @details Creates learnable weight matrices for each bias component and
+    #          interaction layers to model complex bias dependencies.
+    #
+    def __init__(self, k=16, h=32):
+        super().__init__()
+        self.k = k  ##< Embedding dimension for bias factors
+        self.W = nn.ParameterDict({c: nn.Parameter(torch.randn(1, k)) for c in BIAS_COLS})
+        self.act = nn.ReLU()
+        self.interaction_layer = nn.Sequential(
+            nn.Linear(21 * k, h),
+            nn.ReLU(),
+            nn.Linear(h, 1),
+            nn.Sigmoid()
         )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        return f"[LLM generation failed] {e}"
+
+    ##
+    # @brief Forward pass through JBF module
+    # @param bias_tensor torch.Tensor Input bias tensor of shape (batch_size, 6)
+    #        where each element corresponds to a bias component value
+    # @return torch.Tensor Fairness adjustment scores of shape (batch_size,)
+    # @details Computes embeddings for each bias component, calculates pairwise interactions,
+    #          and passes through interaction layers to produce fairness scores.
+    #
+    def forward(self, bias_tensor):
+        emb = [self.act(bias_tensor[:, i:i+1]) @ self.W[c] for i, c in enumerate(BIAS_COLS)]
+        inter = [emb[i] * emb[j] for i in range(len(emb)) for j in range(i + 1, len(emb))]
+        jbf_input = torch.cat(emb + inter, dim=1)
+        return self.interaction_layer(jbf_input).squeeze()
+
+
+
+##
+# @class NeuralCF
+# @brief Neural Collaborative Filtering model combining MLP and GMF
+# @details Implements dual-path architecture: MLP processes concatenated embeddings,
+#          GMF uses element-wise multiplication. Final layer combines both paths
+#          for rating prediction.
+#
+class NeuralCF(nn.Module):
+    ##
+    # @brief Initialize NeuralCF model
+    # @param num_users int Total number of users in the system
+    # @param num_items int Total number of items in the system
+    # @param embedding_dim int Dimension of user and item embeddings (default: 32)
+    # @details Creates separate embeddings for MLP and GMF paths to maximize expressiveness.
+    #
+    def __init__(self, num_users, num_items, embedding_dim=32):
+        super().__init__()
+        ##< MLP path embeddings
+        self.user_embedding_mlp = nn.Embedding(num_users, embedding_dim)
+        self.item_embedding_mlp = nn.Embedding(num_items, embedding_dim)
+        ##< GMF path embeddings
+        self.user_embedding_gmf = nn.Embedding(num_users, embedding_dim)
+        self.item_embedding_gmf = nn.Embedding(num_items, embedding_dim)
+        
+        ##< MLP layers: concatenate embeddings and pass through dense layers
+        self.mlp = nn.Sequential(
+            nn.Linear(2 * embedding_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU()
+        )
+        ##< Final output layer combining MLP and GMF paths
+        self.output_layer = nn.Linear(embedding_dim + 32, 1)
+
+    ##
+    # @brief Forward pass through NeuralCF model
+    # @param user torch.Tensor User indices of shape (batch_size,)
+    # @param item torch.Tensor Item indices of shape (batch_size,)
+    # @return torch.Tensor Predicted ratings of shape (batch_size,)
+    # @details Computes MLP and GMF paths independently, then concatenates
+    #          and passes through output layer for final rating prediction.
+    #
+    def forward(self, user, item):
+        u_mlp, i_mlp = self.user_embedding_mlp(user), self.item_embedding_mlp(item)
+        mlp_out = self.mlp(torch.cat([u_mlp, i_mlp], dim=1))
+        u_gmf, i_gmf = self.user_embedding_gmf(user), self.item_embedding_gmf(item)
+        gmf_out = u_gmf * i_gmf
+        return self.output_layer(torch.cat([gmf_out, mlp_out], dim=1)).squeeze()
+
+    ##
+    # @brief Return combined item embedding for similarity-based personalization.
+    # @param item_indices torch.Tensor of item IDs
+    # @return torch.Tensor Embedding matrix [num_items, 2 * embedding_dim]
+    #
+    def item_embeddings(self, item_indices):
+        """
+        Build the same representation the model uses internally:
+        item_embedding = concat(GMF_embedding, MLP_embedding)
+        """
+
+        i_gmf = self.item_embedding_gmf(item_indices)   # [N, dim]
+        i_mlp = self.item_embedding_mlp(item_indices)   # [N, dim]
+
+        # concat into final embedding used for similarity calculations
+        return torch.cat([i_gmf, i_mlp], dim=1)          # [N, 2*dim]

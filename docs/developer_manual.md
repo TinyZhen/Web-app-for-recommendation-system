@@ -8,12 +8,8 @@
 - FastAPI entry point
 - Defines API routes
 
-### combined_biases.py
-- Implements fairness-aware recommendation logic
-
-### model_classes.py
-- Defines machine learning models and datasets
-
+### fine_tune.py
+- Defines finetuning of the model
 ### models.py
 - Defines API response models
 
@@ -44,7 +40,7 @@ Authentication wrappers and route protection
 
 ## API Design
 
-- REST-based communication
+- Fast API Based Communication
 - JSON request/response format
 - Backend communicates with Firebase and Groq
 

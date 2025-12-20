@@ -2,8 +2,8 @@
 
 ## Backend
 - `main.py`: FastAPI entry point
-- `combined_biases.py`: Fairness-aware recommendation logic
-- `model_classes.py`: ML model definitions
+- `fine_tune.py`: Fine Tune Logic
+- `models.py`: ML model definitions
 - `firebase_admin_init.py`: Firebase Admin SDK initialization
 
 ## Frontend

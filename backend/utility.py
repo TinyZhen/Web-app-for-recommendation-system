@@ -92,6 +92,25 @@ def get_X_u(user_id, users, user_profile=None):
         "zip": row["Zip-code"]
     }
 
+##
+# @brief Build a user-friendly LLM prompt for recommendation explanations
+#
+# @param E_ui dict Bias attribution vector with keys:
+#        PB, IB, DB_gender, DB_age, DB_occupation, DB_zipcode
+# @param X_u dict User context (e.g., name, age, occupation)
+# @param M_i dict Item context (e.g., title, category)
+# @param theta_u float Explanation depth parameter in range [0.0, 1.0]
+#
+# @return str Natural-language prompt string for the LLM
+#
+# @details
+# The explanation depth is controlled by theta_u:
+# - theta_u <= 0.3 → brief, single-factor explanation
+# - 0.3 < theta_u <= 0.7 → moderate explanation with up to two factors
+# - theta_u > 0.7 → detailed, fairness-aware explanation
+#
+# The generated prompt explicitly avoids first-person phrasing and direct user addressing.
+#
 def build_explanation_prompt(E_ui, X_u, M_i, theta_u):
     """
     Builds a user-friendly prompt for LLM-based recommendation explanations.
@@ -163,6 +182,23 @@ Focus on fairness and personalization while remaining easy to understand.
 
     return prompt
 
+##
+# @brief Generate a natural-language explanation using an LLM
+#
+# @param E_ui dict Bias attribution vector
+# @param X_u dict User context
+# @param M_i dict Item context
+# @param client OpenAI-compatible client instance
+# @param theta_u float Explanation depth parameter
+# @param temperature float Sampling temperature for the LLM (default: 0.7)
+#
+# @return str Generated explanation text, or an error message if generation fails
+#
+# @details
+# This function constructs a prompt using build_explanation_prompt() and
+# invokes a chat-completion LLM to generate a neutral, reason-based explanation.
+# The system prompt explicitly discourages first-person recommendations.
+#
 def generate_llm_explanation(E_ui, X_u, M_i, client, theta_u, temperature=0.7):
     # Build prompt using your existing function
     prompt = build_explanation_prompt(E_ui, X_u, M_i, theta_u)
@@ -188,7 +224,25 @@ def generate_llm_explanation(E_ui, X_u, M_i, client, theta_u, temperature=0.7):
     except Exception as e:
         return f"[LLM generation failed] {e}"
     
-# --- Proportional Demographic Bias (DB) helpers ---
+##
+# @brief Compute proportional demographic bias for a given demographic attribute
+#
+# @param ratings_df pd.DataFrame Ratings data with columns: UserID, MovieID
+# @param users_df pd.DataFrame User metadata containing the demographic field
+# @param group_field str Demographic attribute (e.g., Gender, Age, Occupation, Zip-code)
+# @param scaler sklearn.preprocessing.MinMaxScaler Instance used to normalize bias values
+#
+# @return pd.DataFrame DataFrame with columns:
+#         UserID, MovieID, DB_<group_field>
+#
+# @details
+# The proportional demographic bias is computed as:
+#   (# unique users in demographic group who interacted with item)
+#   -------------------------------------------------------------
+#   (total # unique users in that demographic group)
+#
+# The resulting values are normalized to [0, 1] using MinMaxScaler.
+#
 def compute_proportional_demographic_bias(ratings_df: pd.DataFrame, users_df: pd.DataFrame, group_field: str, scaler) -> pd.DataFrame:
     """Returns columns: ['UserID','MovieID', f'DB_{group_field_normalized}']"""
     bias_col = "DB_" + group_field.lower().replace("-", "")

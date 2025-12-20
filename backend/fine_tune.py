@@ -11,9 +11,9 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from sklearn.preprocessing import LabelEncoder
+# from sklearn.preprocessing import LabelEncoder
 import joblib
-from model_classes import NeuralCF, CombinedBiasInteractionModule, BIAS_COLS
+from models import NeuralCF, CombinedBiasInteractionModule, BIAS_COLS
 from utility import get_X_u, get_M_i, generate_llm_explanation
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

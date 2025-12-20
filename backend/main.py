@@ -1,30 +1,38 @@
-"""
-main.py
-FastAPI server for the fairness-aware recommendation backend.
+##
+# @file main.py
+# @brief FastAPI server for the fairness-aware recommendation backend
+#
+# @details
+# This module exposes endpoints used by the frontend to:
+# - Verify server health
+# - Authenticate users via Firebase
+# - Fine-tune a fairness-aware recommendation model per user
+# - Generate personalized, explainable recommendations
+#
+# The implementation emphasizes:
+# - Clear separation between API logic and ML pipelines
+# - Firebase-based authentication
+# - Robust error handling
 
-This file exposes a small set of endpoints used by the frontend and testing tools:
-- /health: basic healthcheck
-- /recommend: (mock) recommendations
-- /run-combined-biases: run batch bias explanation routine
-- /favorites: (mock) favorites list
-- /fine_tune_recommend: fine-tune model for a user and return fairness-aware recommendations
-
-The implementation keeps dependencies minimal and includes clear error handling
-and Doxygen-style docstrings to make automatic documentation generation straightforward.
-"""
-
-from typing import List, Optional
+from typing import Optional
 import os
 from fastapi import FastAPI, Depends, HTTPException, status, Header, Body
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from firebase_admin import auth as fb_auth, firestore
 from firebase_admin_init import init_firebase_app, fb_read
-from models import Recommendation, RecsResponse, Favorites, FavsResponse
 import pandas as pd
 import joblib
 
-# Optional heavy imports used only by fine-tune path
+# ==============================================================
+# Optional heavy imports (ML + LLM)
+# ==============================================================
+##
+# @details
+# These imports are wrapped in a try/except block so that
+# static analysis, documentation generation, or lightweight
+# tests can run without requiring GPU/ML dependencies.
+#
 try:
     import torch
     from openai import OpenAI
@@ -38,18 +46,26 @@ except Exception:
     fine_tune_user = None
     recommend_and_explain = None
 
-# Optional legacy utility
-try:
-    from combined_biases import compute_explanations
-except Exception:
-    compute_explanations = None
-
-
+# ==============================================================
+# Application initialization
+# ==============================================================
+##
+# @details
+# Loads environment variables and initializes the Firebase app.
+#
 load_dotenv()
 init_firebase_app()
 
 db = firestore.client()
 
+# ==============================================================
+# CORS configuration
+# ==============================================================
+##
+# @details
+# Allowed origins are read from the ALLOWED_ORIGINS environment variable.
+# Defaults to localhost for development.
+#
 ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",") if o.strip()]
 
 app = FastAPI(title="Recommender API")
@@ -61,14 +77,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+# ==============================================================
+# Authentication dependency
+# ==============================================================
+##
+# @brief Verify Firebase ID token and extract user UID
+#
+# @param authorization Optional[str]
+#        Authorization header containing a Bearer token
+#
+# @return str Firebase user UID
+#
+# @exception HTTPException
+#        Raised if the token is missing or invalid.
+#
+# @details
+# This dependency is used by protected endpoints to ensure
+# that requests are authenticated via Firebase Authentication.
+#
 async def get_current_user(authorization: Optional[str] = Header(default=None)) -> str:
     """
     Verify Firebase ID token and return the user UID.
 
     @param authorization: Authorization header containing Bearer token
     @return: Firebase UID string
-    @raises HTTPException: 401 if token missing or invalid
+    @exception HTTPException: Raised if the token is missing or invalid
     """
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
@@ -79,7 +112,19 @@ async def get_current_user(authorization: Optional[str] = Header(default=None)) 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid token: {e}")
 
-
+# ==============================================================
+# Health endpoint
+# ==============================================================
+##
+# @brief Healthcheck endpoint
+#
+# @return dict
+#         JSON object indicating service availability
+#
+# @details
+# This endpoint can be used by load balancers, deployment
+# scripts, or monitoring tools to verify that the API is running.
+#
 @app.get("/health")
 async def health() -> dict:
     """Healthcheck endpoint.
@@ -88,45 +133,42 @@ async def health() -> dict:
     """
     return {"status": "ok"}
 
-
-@app.get("/recommend", response_model=RecsResponse)
-async def recommendations(uid: str = Depends(get_current_user)) -> RecsResponse:
-    """Return a small mock set of recommendations for the authenticated user.
-
-    This endpoint is intentionally simple and used by the front-end during development.
-    """
-    mock = [
-        Recommendation(movie_id="tt0133093", title="The Matrix", score=0.97, reason="Sci-fi classic that matches your action preference"),
-        Recommendation(movie_id="tt0816692", title="Interstellar", score=0.95, reason="High rating for cerebral sci-fi"),
-        Recommendation(movie_id="tt0109830", title="Forrest Gump", score=0.91, reason="Popular feel-good drama"),
-    ]
-    return RecsResponse(user_uid=uid, items=mock)
-
-
-@app.post("/run-combined-biases")
-def run_combined_biases(limit: int = 100) -> dict:
-    """Run the legacy combined bias explanation routine.
-
-    @param limit: maximum number of explanations to produce
-    @return: dictionary with key "explanations" containing list[str]
-    """
-    if compute_explanations is None:
-        raise HTTPException(status_code=501, detail="compute_explanations not available in this environment")
-    explanations: List[str] = compute_explanations(limit=limit)
-    return {"explanations": explanations}
-
-
-@app.post("/favorites", response_model=FavsResponse)
-def favorites(uid: str = Depends(get_current_user)) -> FavsResponse:
-    """Return a mock favorites list for the authenticated user."""
-    mock = [
-        Favorites(movie_id="tt0122093", title="The Matrix"),
-        Favorites(movie_id="tt0816692", title="Interstellar"),
-        Favorites(movie_id="tt0109830", title="Forrest Gump"),
-    ]
-    return FavsResponse(user_uid=uid, items=mock)
-
-
+# ==============================================================
+# Fine-tune + recommend endpoint
+# ==============================================================
+##
+# @brief Fine-tune a recommendation model for a user and return recommendations
+#
+# @param payload dict
+#        Request body containing:
+#        - ratings: list of {movieId, rating}
+#        - top_k: number of recommendations to return (optional)
+#
+# @param uid str
+#        Firebase user UID injected by get_current_user()
+#
+# @return dict
+#         JSON object containing:
+#         - user_uid: Firebase UID
+#         - recommendations: list of recommended items with explanations
+#
+# @exception HTTPException
+#        400 if payload is malformed
+#        404 if user profile is not found
+#        501 if ML components are unavailable
+#        500 for unexpected internal errors
+#
+# @details
+# Workflow:
+# 1. Validate request payload
+# 2. Load pre-trained model and encoders
+# 3. Fetch user profile from Firestore
+# 4. Convert user ratings into training format
+# 5. Load MovieLens reference datasets
+# 6. Fine-tune user embeddings (if user is new)
+# 7. Generate fairness-aware recommendations
+# 8. Produce LLM-based explanations
+#
 @app.post("/fine_tune_recommend")
 async def fine_tune_recommend(payload: dict = Body(...), uid: str = Depends(get_current_user)) -> dict:
     """
@@ -227,7 +269,7 @@ async def fine_tune_recommend(payload: dict = Body(...), uid: str = Depends(get_
             ratings_all,
             client,
             theta_u,
-            ratings_input=ratings_list,   # ⭐⭐⭐ 必须加这个
+            ratings_input=ratings_list,   
             top_k=top_k,
         )
 
