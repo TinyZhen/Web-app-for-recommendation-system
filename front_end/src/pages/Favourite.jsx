@@ -1,5 +1,19 @@
-
 // src/pages/Favorites.jsx
+
+/**
+ * @file Favorites.jsx
+ * @brief Displays and manages the user's saved movie recommendations.
+ *
+ * This page renders a list of movie recommendations that the user
+ * has explicitly saved. It supports:
+ * - Loading saved recommendations from local cache or Firestore
+ * - Displaying movie posters, genres, and explanations
+ * - Removing saved recommendations from both Firestore and localStorage
+ *
+ * The component prioritizes cached data to reduce Firestore reads
+ * and gracefully falls back to server queries when necessary.
+ */
+
 import { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import SavedRecommendCard from '../components/SavedRecommendCard.jsx';
@@ -11,9 +25,20 @@ import {
   query,
   where,
   getDocs,
-  deleteDoc,          // <-- ✅ CHANGE: added deleteDoc
-  doc                 // <-- ✅ CHANGE: added doc
+  deleteDoc,          
+  doc                 
 } from 'firebase/firestore';
+
+/**
+ * @brief Favorites page component.
+ *
+ * Displays the authenticated user's saved movie recommendations.
+ * Recommendations are loaded from localStorage when available,
+ * otherwise fetched from Firestore. Users can remove saved items,
+ * which updates both the database and local cache.
+ *
+ * @returns {JSX.Element} Favorites page UI.
+ */
 
 export default function Favourites() {
   const { user, loading: authLoading } = useAuth();
@@ -21,6 +46,14 @@ export default function Favourites() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  /**
+   * @brief Remove a saved recommendation.
+   *
+   * Deletes the selected recommendation from Firestore and synchronizes
+   * the local UI state and cached localStorage data to reflect the change.
+   *
+   * @param {string} id - Firestore document ID of the saved recommendation.
+   */
   async function handleDelete(id) {
     try {
       await deleteDoc(doc(db, "savedRecommendations", id));
@@ -36,7 +69,13 @@ export default function Favourites() {
     }
   }
 
-
+  /**
+   * @brief Load saved recommendations for the authenticated user.
+   *
+   * Attempts to restore recommendations from localStorage first to
+   * minimize Firestore reads. If no cache is found, queries Firestore
+   * and caches the result locally. Handles both cache and server sources.
+   */
   useEffect(() => {
     if (authLoading || !user) return;
 

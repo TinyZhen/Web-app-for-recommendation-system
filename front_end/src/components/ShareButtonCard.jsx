@@ -1,6 +1,29 @@
+/**
+ * @file ShareButtonCard.jsx
+ * @brief Reusable social sharing UI component for sharing recommendation messages.
+ *
+ * This component renders a compact floating share button that expands
+ * into multiple social sharing options. It supports copying text to the
+ * clipboard as well as sharing via Email, WhatsApp, and Twitter.
+ *
+ * The component is designed to be lightweight, reusable, and easily
+ * embeddable within recommendation or result views.
+ */
 import { useState } from "react";
 import "../style/ShareButtonCard.css";
 import { FaShareAlt, FaWhatsapp, FaTwitter, FaEnvelope, FaLink } from "react-icons/fa";
+
+/**
+ * @brief ShareButtonCard component.
+ *
+ * Displays a toggleable share menu that allows users to share a
+ * recommendation message across multiple platforms. If no message
+ * is provided, a default friendly message is used.
+ *
+ * @param {Object} props - Component properties.
+ * @param {string} [props.message] - Optional message to share across platforms.
+ * @returns {JSX.Element} Rendered share button and expandable share menu.
+ */
 
 export default function ShareButtonCard({ message }) {
   const [open, setOpen] = useState(false);

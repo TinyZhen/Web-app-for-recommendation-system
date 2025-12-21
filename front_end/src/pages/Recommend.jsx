@@ -1,3 +1,20 @@
+/**
+ * @file Recommend.jsx
+ * @brief Personalized movie recommendation results page.
+ *
+ * This page displays movie recommendations generated either from a
+ * newly completed survey or from a cached previous session. It supports:
+ *
+ * - Rendering recommendation titles, genres, posters, and explanations
+ * - Fetching missing movie posters from the OMDb API
+ * - Persisting recommendations locally using browser storage
+ * - Allowing users to save selected recommendations to Firestore
+ * - Sharing recommendations via social platforms
+ *
+ * The component avoids unnecessary Firestore reads by prioritizing
+ * navigation state and localStorage for recommendation retrieval.
+ */
+
 import { useEffect, useState } from "react";
 import { db } from "../firebase";
 import { useLocation } from "react-router-dom";
@@ -13,12 +30,18 @@ import fallbackPoster from "../assets/logo.png";
 import "../style/Recommend.css";
 import ShareButtonCard from "../components/ShareButtonCard";
 /**
- * Recommend page
+ * @brief Recommend page component.
  *
- * Shows recommendations (from survey or cache), fetches posters from OMDb when needed,
- * and allows saving recommendations to Firestore.
+ * Displays personalized movie recommendations for the authenticated user.
+ * Recommendations may originate from:
+ * - A newly completed survey (via navigation state), or
+ * - Cached recommendations stored in localStorage
  *
- * @returns {JSX.Element}
+ * The component fetches missing posters from OMDb, allows users to
+ * save recommendations to Firestore, and provides sharing options
+ * for individual recommendations.
+ *
+ * @returns {JSX.Element} Recommendations page UI.
  */
 export default function Recommend() {
   const { user } = useAuth();
@@ -34,9 +57,16 @@ export default function Recommend() {
 
   console.log("DEBUG — fromSurvey:", fromSurvey);
   console.log("DEBUG — explanations:", surveyExplanations);
-  // -----------------------------
-  // Poster Fetch
-  // -----------------------------
+
+  /**
+   * @brief Fetch a movie poster from the OMDb API.
+   *
+   * Cleans the movie title and queries OMDb for a matching poster.
+   * Returns null if the API key is missing or the fetch fails.
+   *
+   * @param {string} title - Movie title.
+   * @returns {Promise<string|null>} Poster URL or null.
+   */
   async function fetchPosterFromOMDB(title) {
     if (!title) return null;
 
@@ -59,9 +89,16 @@ export default function Recommend() {
     return null;
   }
 
-  // -----------------------------
-  // Load recommendations (NO FIREBASE)
-  // -----------------------------
+  /**
+   * @brief Load recommendations from survey state or local cache.
+   *
+   * - If arriving from a new survey, recommendations are rebuilt
+   *   from navigation state and cached locally.
+   * - If not, recommendations are restored from localStorage.
+   * - Missing posters are fetched from OMDb.
+   *
+   * This process avoids Firestore reads entirely.
+   */
   useEffect(() => {
     const load = async () => {
       const cacheKey = `lastSurveyRecs_${user?.uid || displayName}`;
@@ -117,9 +154,16 @@ export default function Recommend() {
   }, [fromSurvey, JSON.stringify(surveyExplanations), user?.uid]);
 
 
-  // -----------------------------
-  // Save → ONLY write to Firestor
-  // -----------------------------
+  /**
+   * @brief Save a recommendation to Firestore.
+   *
+   * Persists the selected recommendation to the user's saved list,
+   * updates local UI state, and synchronizes cached favorites
+   * in localStorage.
+   *
+   * @param {Object} rec - Recommendation object.
+   * @param {number} index - Index in the recommendations list.
+   */
   async function handleSave(rec, index) {
     try {
       const docRef = await addDoc(collection(db, "savedRecommendations"), {

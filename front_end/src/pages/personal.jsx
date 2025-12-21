@@ -1,3 +1,19 @@
+/**
+ * @file Profile.jsx
+ * @brief User profile management and preference overview page.
+ *
+ * This page allows authenticated users to view and update their
+ * personal profile information stored in Firestore. In addition,
+ * it provides a summary of recently rated movies from past survey
+ * sessions and enables exploration of detailed movie metadata.
+ *
+ * Key responsibilities:
+ * - Load and persist user profile data (demographics + preferences)
+ * - Manage explanation preference (`theta_u`) for recommendation depth
+ * - Display recent survey history using cached localStorage data
+ * - Lazily fetch movie posters and metadata from OMDb
+ * - Provide an interactive modal for viewing detailed movie information
+ */
 
 import { useState, useEffect } from "react";
 import { db } from "../firebase";
@@ -6,19 +22,38 @@ import { useAuth } from "../auth/AuthProvider";
 import { fetchOmdbData } from "../lib/api";
 import "../style/Profile.css";
 
+/**
+ * @brief Profile page component.
+ *
+ * Renders the authenticated user's profile form and survey history.
+ * Users can update personal attributes (age, gender, occupation,
+ * location) as well as their preferred recommendation explanation
+ * style. Changes are persisted to Firestore.
+ *
+ * The page also visualizes recent movie ratings and supports
+ * on-demand loading of detailed movie metadata using OMDb.
+ *
+ * @returns {JSX.Element} Profile page UI.
+ */
 export default function Profile() {
   const { user } = useAuth();
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieDetails, setMovieDetails] = useState(null);
 
-  // ✅✅✅ UPDATED: Added theta_u to profile state
+  /**
+   * @brief Local profile state.
+   *
+   * Mirrors the Firestore user document and includes demographic
+   * attributes along with the explanation preference parameter
+   * (`theta_u`), which controls recommendation explanation depth.
+   */
   const [profile, setProfile] = useState({
     displayName: "",
     age: "",
     gender: "",
     occupation: "",
     zipcode: "",
-    theta_u: null, // ✅✅✅ NEW
+    theta_u: null, 
   });
 
   const [loading, setLoading] = useState(true);
@@ -26,7 +61,13 @@ export default function Profile() {
   const [status, setStatus] = useState("");
   const [surveyHistory, setSurveyHistory] = useState([]);
 
-  // 🔹 Load user profile from Firestore
+  /**
+   * @brief Load user profile and survey history.
+   *
+   * Fetches the authenticated user's profile document from Firestore
+   * and initializes local state. Also restores recent survey history
+   * from browser localStorage to avoid unnecessary database reads.
+   */
   useEffect(() => {
     if (!user?.uid) return;
 
@@ -42,7 +83,7 @@ export default function Profile() {
           setProfile((prev) => ({
             ...prev,
             ...data,
-            // ✅✅✅ UPDATED: Ensure theta_u is always a number
+            
             theta_u: data.theta_u !== undefined ? Number(data.theta_u) : 0.5,
           }));
         }
@@ -62,7 +103,13 @@ export default function Profile() {
     loadProfile();
   }, [user]);
 
-  // Lazy-fetch missing posters for the latest survey session
+  /**
+   * @brief Lazily fetch missing posters for the most recent survey.
+   *
+   * Iterates over the latest survey session and retrieves missing
+   * movie posters from OMDb. Updates both component state and
+   * localStorage to keep cached data in sync.
+   */
   useEffect(() => {
     if (!surveyHistory || surveyHistory.length === 0) return;
     const latest = surveyHistory[0];
@@ -112,7 +159,14 @@ export default function Profile() {
     };
   }, [surveyHistory, user]);
 
-  // 🔹 Update handler (convert age + occupation + theta_u to numbers)
+  /**
+   * @brief Handle profile form field updates.
+   *
+   * Normalizes numeric and floating-point fields before updating
+   * local profile state to ensure Firestore-compatible values.
+   *
+   * @param {Event} e - Input change event.
+   */
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -122,7 +176,7 @@ export default function Profile() {
       processedValue = value === "" ? "" : Number(value);
     }
 
-    // ✅✅✅ UPDATED: theta_u must be float
+    
     if (name === "theta_u") {
       processedValue = value === "" ? null : parseFloat(value);
     }
@@ -130,7 +184,14 @@ export default function Profile() {
     setProfile((p) => ({ ...p, [name]: processedValue }));
   };
 
-  // 🔹 Save profile to Firestore
+  /**
+   * @brief Persist profile updates to Firestore.
+   *
+   * Saves the updated profile fields to the user's Firestore
+   * document and records an update timestamp.
+   *
+   * @param {Event} e - Form submission event.
+   */
   const handleSave = async (e) => {
     e.preventDefault();
     if (!user?.uid) return;
@@ -174,7 +235,7 @@ export default function Profile() {
           />
         </label>
 
-        {/* 🔹 Age Dropdown */}
+        {/*  Age Dropdown */}
         <label>
           Age:
           <select name="age" value={profile.age} onChange={handleChange}>
@@ -189,7 +250,7 @@ export default function Profile() {
           </select>
         </label>
 
-        {/* 🔹 Gender */}
+        {/*  Gender */}
         <label>
           Gender:
           <select name="gender" value={profile.gender} onChange={handleChange}>
@@ -200,7 +261,7 @@ export default function Profile() {
           </select>
         </label>
 
-        {/* 🔹 Occupation Dropdown */}
+        {/*  Occupation Dropdown */}
         <label>
           Occupation:
           <select name="occupation" value={profile.occupation} onChange={handleChange}>
@@ -239,7 +300,7 @@ export default function Profile() {
           />
         </label>
 
-        {/* ✅✅✅ NEW: Explanation Depth (theta_u) */}
+        
         <label>
           Recommendation Explanation Style:
           <select

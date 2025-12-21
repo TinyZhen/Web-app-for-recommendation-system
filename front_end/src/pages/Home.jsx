@@ -1,8 +1,35 @@
-
 // src/pages/Home.jsx
+
+/**
+ * @file Home.jsx
+ * @brief Landing page for the MovieFlix application.
+ *
+ * This component renders the public-facing home page that introduces
+ * the application and its core value proposition. It serves as the
+ * primary entry point for users and highlights the benefits of using
+ * the platform.
+ *
+ * The page includes:
+ * - A hero section with branding and call-to-action buttons
+ * - Navigation links to the survey and favorites pages
+ * - A feature overview section explaining why users should choose
+ *   the platform
+ */
+
 import React from "react";
 import { Link } from "react-router-dom";
 import "../style/Home.css"; // We'll create this CSS next
+
+/**
+ * @brief Home page component.
+ *
+ * Displays a marketing-focused landing page with a hero banner,
+ * calls to action, and a brief overview of the platform’s key
+ * features. Designed to guide users toward taking the survey
+ * or exploring saved favorites.
+ *
+ * @returns {JSX.Element} Home page UI.
+ */
 
 export default function Home() {
   return (
