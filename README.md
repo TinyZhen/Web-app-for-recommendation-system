@@ -168,3 +168,50 @@ http://localhost:8000
 ```
 
 ---
+
+## 9. Viewing the Code Documentation (Doxygen)
+
+This project uses **Doxygen** to generate developer-oriented code documentation.
+
+The GitHub repository intentionally contains only the **documentation sources and configuration**, not the generated HTML output. This follows standard software engineering best practices, where generated files are built locally.
+
+---
+
+### 🛠 Installing Doxygen
+
+Before generating the documentation, Doxygen must be installed on your system.
+
+#### macOS (using Homebrew)
+```bash
+brew install doxygen
+```
+#### Ubuntu/Debian Linux
+```bash
+sudo apt update
+sudo apt install doxygen
+```
+
+#### Windows
+**Steps:**
+1. Download the installer from: https://www.doxygen.nl/download.html
+2. Run the installer and follow the setup instructions.
+3. Ensure doxygen is available in your system PATH.
+
+Verify the installation:
+```bash
+doxygen --version
+```
+
+### Steps to Generate and View Doxygen Documentation
+1. Navigate to the documentation directory:
+```bash
+cd docs
+```
+2. Run Doxygen using the provided configuration file:
+```bash
+doxygen Doxyfile
+```
+3. Open the generated documentation in a web browser:
+```bash
+open ../doxygen_output/html/index.html
+```
